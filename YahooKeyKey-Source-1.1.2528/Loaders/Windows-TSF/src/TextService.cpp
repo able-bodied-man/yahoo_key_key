@@ -274,8 +274,20 @@ bool CTextService::_EnsureServer()
     }
 
     _fServerActive = true;
+
     _rpc.SetInputBufferFontSize(-16);
+    KeyKeyLog(L"SetInputBufferFontSize: %s (last rpc error 0x%08x)",
+              KeyKeyRpcLastError() ? L"failed" : L"ok", KeyKeyRpcLastError());
+
+    // Hide before showing: the status bar is a plain (non topmost) window owned
+    // by the KeyKey server, and its Show() returns early when it thinks it is
+    // already visible - which leaves it behind the application window.
+    _rpc.HideStatusBar();
     _rpc.ShowStatusBar();
+    const unsigned long barError = KeyKeyRpcLastError();
+    KeyKeyLog(L"ShowStatusBar: %s (rpc error 0x%08x)",
+              barError ? L"failed" : L"ok", barError);
+
     KeyKeyLog(L"Server activated (input method '%s')", inputMethodName.c_str());
     return true;
 }
@@ -356,6 +368,11 @@ STDMETHODIMP CTextService::OnSetFocus(BOOL fForeground)
     }
     else if (_pContext) {
         _EnsureServer();
+        if (_fServerActive) {
+            _rpc.HideStatusBar();
+            _rpc.ShowStatusBar();
+            KeyKeyLog(L"Status bar re-raised on focus (rpc error 0x%08x)", KeyKeyRpcLastError());
+        }
     }
     return S_OK;
 }
@@ -413,19 +430,27 @@ STDMETHODIMP CTextService::OnKeyDown(ITfContext* pic, WPARAM wParam, LPARAM lPar
 
     KKKeyResult result;
     static LONG s_loggedKeys = 0;
+    const bool logThisKey = s_loggedKeys < 40;
+
     if (!_rpc.HandleKey(key.keyCode, key.keyModifiers, &result)) {
-        KeyKeyLog(L"HandleKey failed (vk 0x%02x) - dropping the server connection", (unsigned)wParam);
-        _fServerActive = false;
+        if (s_loggedKeys < 60) {
+            InterlockedIncrement(&s_loggedKeys);
+            KeyKeyLog(L"HandleKey FAULT vk=0x%02x ovk=0x%04x mods=0x%02x rpc=0x%08x",
+                      (unsigned)wParam, key.keyCode, key.keyModifiers, result.rpcException);
+        }
+        // The call failed, not the server: keep the connection and let the
+        // application have the key rather than going dead until reactivation.
         return S_OK;
     }
 
-    if (s_loggedKeys < 40) {
+    if (logThisKey) {
         InterlockedIncrement(&s_loggedKeys);
-        KeyKeyLog(L"key vk=0x%02x ovk=0x%04x mods=0x%02x handled=%d committed=%u composing=%u",
+        KeyKeyLog(L"key vk=0x%02x ovk=0x%04x mods=0x%02x handled=%d committed=%u composing=%u cand=%d",
                   (unsigned)wParam, key.keyCode, key.keyModifiers,
                   (int)result.handled,
                   (unsigned)result.committed.size(),
-                  (unsigned)result.combinedComposition.size());
+                  (unsigned)result.combinedComposition.size(),
+                  (int)result.candidateVisible);
     }
 
     if (!result.handled)

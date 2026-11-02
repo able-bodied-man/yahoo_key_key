@@ -22,6 +22,8 @@ namespace {
 
 // ---------------------------------------------------------------- raw shims
 
+unsigned long g_lastRpcError = 0;
+
 boolean RawOpenConnection(BISContext* context)
 {
     boolean ok = FALSE;
@@ -30,6 +32,7 @@ boolean RawOpenConnection(BISContext* context)
     }
     RpcExcept(1) {
         ok = FALSE;
+        g_lastRpcError = RpcExceptionCode();
     }
     RpcEndExcept
     return ok;
@@ -54,6 +57,7 @@ boolean RawActivate(BISContext context, wchar_t* name, int* x, int* y)
     }
     RpcExcept(1) {
         ok = FALSE;
+        g_lastRpcError = RpcExceptionCode();
     }
     RpcEndExcept
     return ok;
@@ -84,9 +88,12 @@ boolean RawHandleKey(BISContext context,
                      unsigned int* cursorPosition,
                      boolean* candidateVisible,
                      boolean* shouldUpdateCandidate,
-                     unsigned int* highlightedIndex)
+                     unsigned int* highlightedIndex,
+                     unsigned long* exceptionCode)
 {
     boolean handled = FALSE;
+    if (exceptionCode)
+        *exceptionCode = 0;
     RpcTryExcept {
         handled = BISHandleKey(context, keyCode, keyModifiers,
                                committed, combined, combinedAttribute,
@@ -98,6 +105,8 @@ boolean RawHandleKey(BISContext context,
     }
     RpcExcept(1) {
         handled = FALSE;
+        if (exceptionCode)
+            *exceptionCode = RpcExceptionCode();
     }
     RpcEndExcept
     return handled;
@@ -107,7 +116,7 @@ boolean RawShowStatusBar(BISContext context)
 {
     boolean ok = TRUE;
     RpcTryExcept { BISShowStatusBar(context); }
-    RpcExcept(1) { ok = FALSE; }
+    RpcExcept(1) { ok = FALSE; g_lastRpcError = RpcExceptionCode(); }
     RpcEndExcept
     return ok;
 }
@@ -116,7 +125,7 @@ boolean RawHideStatusBar(BISContext context)
 {
     boolean ok = TRUE;
     RpcTryExcept { BISHideStatusBar(context); }
-    RpcExcept(1) { ok = FALSE; }
+    RpcExcept(1) { ok = FALSE; g_lastRpcError = RpcExceptionCode(); }
     RpcEndExcept
     return ok;
 }
@@ -125,7 +134,7 @@ boolean RawSetInputBufferPosition(BISContext context, int x, int y)
 {
     boolean ok = TRUE;
     RpcTryExcept { BISSetInputBufferPosition(context, x, y); }
-    RpcExcept(1) { ok = FALSE; }
+    RpcExcept(1) { ok = FALSE; g_lastRpcError = RpcExceptionCode(); }
     RpcEndExcept
     return ok;
 }
@@ -134,7 +143,7 @@ boolean RawSetInputBufferTraits(BISContext context, long fontSize)
 {
     boolean ok = TRUE;
     RpcTryExcept { BISSetInputBufferTraits(context, fontSize); }
-    RpcExcept(1) { ok = FALSE; }
+    RpcExcept(1) { ok = FALSE; g_lastRpcError = RpcExceptionCode(); }
     RpcEndExcept
     return ok;
 }
@@ -143,7 +152,7 @@ boolean RawShowInputBuffer(BISContext context)
 {
     boolean ok = TRUE;
     RpcTryExcept { BISShowInputBuffer(context); }
-    RpcExcept(1) { ok = FALSE; }
+    RpcExcept(1) { ok = FALSE; g_lastRpcError = RpcExceptionCode(); }
     RpcEndExcept
     return ok;
 }
@@ -152,7 +161,7 @@ boolean RawHideInputBuffer(BISContext context)
 {
     boolean ok = TRUE;
     RpcTryExcept { BISHideInputBuffer(context); }
-    RpcExcept(1) { ok = FALSE; }
+    RpcExcept(1) { ok = FALSE; g_lastRpcError = RpcExceptionCode(); }
     RpcEndExcept
     return ok;
 }
@@ -161,7 +170,7 @@ boolean RawSetCandidatePanelPosition(BISContext context, int x, int y)
 {
     boolean ok = TRUE;
     RpcTryExcept { BISSetCandidatePanelPosition(context, x, y); }
-    RpcExcept(1) { ok = FALSE; }
+    RpcExcept(1) { ok = FALSE; g_lastRpcError = RpcExceptionCode(); }
     RpcEndExcept
     return ok;
 }
@@ -170,7 +179,7 @@ boolean RawShowCandidatePanel(BISContext context)
 {
     boolean ok = TRUE;
     RpcTryExcept { BISShowCandidatePanel(context); }
-    RpcExcept(1) { ok = FALSE; }
+    RpcExcept(1) { ok = FALSE; g_lastRpcError = RpcExceptionCode(); }
     RpcEndExcept
     return ok;
 }
@@ -179,7 +188,7 @@ boolean RawHideCandidatePanel(BISContext context)
 {
     boolean ok = TRUE;
     RpcTryExcept { BISHideCandidatePanel(context); }
-    RpcExcept(1) { ok = FALSE; }
+    RpcExcept(1) { ok = FALSE; g_lastRpcError = RpcExceptionCode(); }
     RpcEndExcept
     return ok;
 }
@@ -188,7 +197,7 @@ boolean RawHideToolTip(BISContext context)
 {
     boolean ok = TRUE;
     RpcTryExcept { BISHideToolTip(context); }
-    RpcExcept(1) { ok = FALSE; }
+    RpcExcept(1) { ok = FALSE; g_lastRpcError = RpcExceptionCode(); }
     RpcEndExcept
     return ok;
 }
@@ -272,6 +281,11 @@ std::wstring BuildEndpoint(const wchar_t* serverName)
 }
 
 } // namespace
+
+unsigned long KeyKeyRpcLastError()
+{
+    return g_lastRpcError;
+}
 
 KeyKeyRpc::KeyKeyRpc()
     : m_context(nullptr)
@@ -439,7 +453,8 @@ bool KeyKeyRpc::HandleKey(unsigned int keyCode, unsigned int keyModifiers, KKKey
                                    &cursorPosition,
                                    &candidateVisible,
                                    &shouldUpdateCandidate,
-                                   &highlightedIndex);
+                                   &highlightedIndex,
+                                   &out->rpcException);
 
     out->handled = (handled == TRUE);
     out->committed = FromBuffer(committed);
@@ -457,6 +472,15 @@ bool KeyKeyRpc::HandleKey(unsigned int keyCode, unsigned int keyModifiers, KKKey
     out->highlightedIndex = highlightedIndex;
 
     return true;
+}
+
+void KeyKeyRpc::DropConnection()
+{
+    if (m_stringBinding) {
+        RpcStringFreeW(&m_stringBinding);
+        m_stringBinding = nullptr;
+    }
+    m_context = nullptr;
 }
 
 void KeyKeyRpc::ShowStatusBar()

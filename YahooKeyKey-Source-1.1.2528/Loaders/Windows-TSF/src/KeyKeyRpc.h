@@ -17,6 +17,7 @@
 
 struct KKKeyResult {
     bool handled = false;
+    unsigned long rpcException = 0;   // RpcExceptionCode() when the call faulted
     std::wstring committed;
     std::wstring combinedComposition;
     std::wstring combinedCompositionAttribute;
@@ -31,6 +32,9 @@ struct KKKeyResult {
     bool shouldUpdateCandidate = false;
     unsigned int highlightedIndex = 0;
 };
+
+// RpcExceptionCode() of the last failed RPC call (0 when the last one worked).
+unsigned long KeyKeyRpcLastError();
 
 class KeyKeyRpc {
 public:
@@ -48,6 +52,7 @@ public:
     void Deactivate(std::wstring* residueString);
 
     bool HandleKey(unsigned int keyCode, unsigned int keyModifiers, KKKeyResult* out);
+    void DropConnection();
 
     void ShowStatusBar();
     void HideStatusBar();
