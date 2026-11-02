@@ -146,7 +146,7 @@ void CandidateWindow::Relayout()
     DeleteObject(font);
     ReleaseDC(m_window, dc);
 
-    width = std::max(width, 60);
+    width = (std::max)(width, 60);   // parenthesised: windows.h defines max()
     const int height = m_candidates.empty() ? kCandidateHeight : kCandidateHeight * 2;
 
     RECT workArea = { 0, 0, 0, 0 };

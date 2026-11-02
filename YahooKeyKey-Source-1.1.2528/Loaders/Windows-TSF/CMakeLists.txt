@@ -36,6 +36,7 @@ target_include_directories(KeyKeyTSF PRIVATE
 target_compile_definitions(KeyKeyTSF PRIVATE
     UNICODE _UNICODE
     WIN32_LEAN_AND_MEAN
+    NOMINMAX
     _CRT_SECURE_NO_WARNINGS
     _WIN32_WINNT=0x0601)
 
