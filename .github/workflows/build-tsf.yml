@@ -1,0 +1,46 @@
+name: Build KeyKey TSF loader
+
+on:
+  push:
+    branches: [ master, 'tsf/**' ]
+    paths:
+      - 'YahooKeyKey-Source-1.1.2528/Loaders/Windows-TSF/**'
+      - 'YahooKeyKey-Source-1.1.2528/Loaders/Windows-IMM/BaseIMERPC/**'
+      - '.github/workflows/build-tsf.yml'
+  pull_request:
+    paths:
+      - 'YahooKeyKey-Source-1.1.2528/Loaders/Windows-TSF/**'
+      - 'YahooKeyKey-Source-1.1.2528/Loaders/Windows-IMM/BaseIMERPC/**'
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: MSVC x64
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: Configure
+        run: cmake -S YahooKeyKey-Source-1.1.2528/Loaders/Windows-TSF -B build -A x64
+
+      - name: Build
+        run: cmake --build build --config Release
+
+      - name: List output
+        shell: pwsh
+        run: |
+          Get-ChildItem build -Recurse -Filter *.dll |
+            Select-Object FullName, Length | Format-Table -AutoSize
+
+      - name: Upload DLL
+        uses: actions/upload-artifact@v4
+        with:
+          name: KeyKeyTSF-x64
+          path: build/Release/KeyKeyTSF.dll
+          if-no-files-found: error
