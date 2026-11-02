@@ -39,6 +39,7 @@ jobs:
           $project = "YahooKeyKey-Source-1.1.2528\Loaders\Windows-IMM\BaseIMEUI\BaseIMEUI.csproj"
           msbuild $project `
             /p:Configuration=Release `
+            /p:Platform=AnyCPU `
             /p:TargetFrameworkVersion=v2.0 `
             /p:FrameworkPathOverride="$refDir" `
             /p:SignAssembly=false `

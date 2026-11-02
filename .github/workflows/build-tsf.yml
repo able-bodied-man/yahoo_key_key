@@ -43,7 +43,7 @@ jobs:
           nuget install Microsoft.NETFramework.ReferenceAssemblies.net20 -OutputDirectory refpkgs -NonInteractive | Out-Null
           $refDir = (Get-ChildItem refpkgs -Recurse -Filter mscorlib.dll | Select-Object -First 1).DirectoryName
           msbuild "YahooKeyKey-Source-1.1.2528\Loaders\Windows-IMM\BaseIMEUI\BaseIMEUI.csproj" `
-            /p:Configuration=Release /p:TargetFrameworkVersion=v2.0 `
+            /p:Configuration=Release /p:Platform=AnyCPU /p:TargetFrameworkVersion=v2.0 `
             /p:FrameworkPathOverride="$refDir" /p:SignAssembly=false /p:AssemblyOriginatorKeyFile= `
             /p:OutputPath="$PWD\keykeyui\out\" /v:minimal 2>&1 | Tee-Object -FilePath keykeyui.log
           $code = $LASTEXITCODE
