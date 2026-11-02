@@ -85,3 +85,36 @@ jobs:
           name: KeyKeyTSF-${{ matrix.arch }}
           path: KeyKeyTSF-${{ matrix.arch }}.zip
           if-no-files-found: error
+
+  release:
+    name: Publish preview release
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download packages
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Publish
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: tsf-preview
+          name: KeyKey TSF front end (preview)
+          body: |
+            Text Services Framework front end for Yahoo! KeyKey, so the installed
+            KeyKey engine can drive apps that only speak TSF (the Microsoft Store
+            build of WhatsApp, other WinUI/UWP apps, the Windows 11 shell).
+
+            Download `KeyKeyTSF-x64.zip` for 64-bit apps (WhatsApp, Office x64) and
+            `KeyKeyTSF-x86.zip` for 32-bit apps. Unzip, right-click `install.bat`
+            and run it as administrator, then add "Yahoo! KeyKey (TSF)" under
+            Chinese (Traditional, Taiwan) in the language settings.
+
+            Built from `${{ github.sha }}` by GitHub Actions.
+          files: artifacts/**/*.zip
+          fail_on_unmatched_files: true
+
