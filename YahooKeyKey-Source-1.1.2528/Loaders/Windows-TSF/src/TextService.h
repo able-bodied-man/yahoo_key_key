@@ -48,7 +48,7 @@ public:
     STDMETHODIMP OnPreservedKey(ITfContext* pic, REFGUID rguid, BOOL* pfEaten) override;
 
 private:
-    ~CTextService();
+    virtual ~CTextService();
 
     void _InitFocusContext();
     void _SetContext(ITfContext* pic);

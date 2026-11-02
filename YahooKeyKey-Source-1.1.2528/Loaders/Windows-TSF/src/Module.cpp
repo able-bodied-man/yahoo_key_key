@@ -6,7 +6,10 @@
 #include "TextService.h"
 
 #include <msctf.h>
+
+#include <cstdio>
 #include <new>
+#include <string>
 
 HINSTANCE g_hInst = nullptr;
 LONG g_cRefDll = 0;
@@ -78,6 +81,8 @@ public:
     }
 
 private:
+    virtual ~CClassFactory() {}
+
     LONG _cRef;
 };
 

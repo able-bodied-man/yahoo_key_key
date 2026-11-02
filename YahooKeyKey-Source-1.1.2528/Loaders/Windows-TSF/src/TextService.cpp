@@ -59,6 +59,8 @@ public:
     }
 
 private:
+    virtual ~CKeyKeyEditSession() {}
+
     LONG _cRef;
     std::function<void(TfEditCookie)> _body;
 };

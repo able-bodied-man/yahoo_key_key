@@ -70,6 +70,20 @@ only a front end and has no dictionaries of its own.
 
 Unregister with `regsvr32 /u KeyKeyTSF.dll`.
 
+CI: `.github/workflows/build-tsf.yml` builds the DLL on `windows-latest` (midl + MSVC).
+This repository is a GitHub *fork*, so Actions are switched off until the owner enables
+them once in the Actions tab ("I understand my workflows, go ahead and enable them").
+
+### What to test after registering
+
+1. Settings → Time & language → Language & region → 中文(繁體，台灣) → Add a keyboard →
+   "Yahoo! KeyKey (TSF)". Switch to it with Win+Space.
+2. Notepad: type `hg` — the purple status bar appears, `口尸手火` shows in the floating
+   input buffer next to the caret, and the candidate panel lists 我, 你, ...
+3. Repeat in the Microsoft Store build of WhatsApp — this is the whole point of the port.
+4. English mode (click 中 in the bar): letters must come out untouched, Ctrl+C must work.
+5. Alt+Tab away: status bar and input buffer must disappear; back: they return at the caret.
+
 ## Notes / known limits
 
 - The floating composition window and candidate list are drawn by `BaseIMEServer.exe`, i.e. by a
