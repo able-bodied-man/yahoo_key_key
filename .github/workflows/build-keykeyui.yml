@@ -1,0 +1,73 @@
+name: Build KeyKeyUI (KeyKey's C# UI)
+
+# KeyKey's bar / candidate panel / input buffer live in KeyKeyUI.dll (a .NET 2.0
+# WinForms assembly built from Loaders/Windows-IMM/BaseIMEUI). Rebuilding just
+# that assembly lets the existing KeyKeyServer.exe pick up fixes without
+# touching the C++/CLI stack.
+
+on:
+  push:
+    branches: [ master, 'tsf/**', 'tsf-*', 'keykeyui/**' ]
+    paths:
+      - 'YahooKeyKey-Source-1.1.2528/Loaders/Windows-IMM/BaseIMEUI/**'
+      - '.github/workflows/build-keykeyui.yml'
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: KeyKeyUI net20
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Fetch .NET 2.0 reference assemblies
+        shell: pwsh
+        run: |
+          nuget install Microsoft.NETFramework.ReferenceAssemblies.net20 -OutputDirectory refpkgs -NonInteractive
+          Get-ChildItem refpkgs -Recurse -Filter mscorlib.dll | Select-Object -First 3 FullName
+
+      - name: Build
+        shell: pwsh
+        run: |
+          $refDir = (Get-ChildItem refpkgs -Recurse -Filter mscorlib.dll | Select-Object -First 1).DirectoryName
+          Write-Host "Reference assemblies: $refDir"
+          $project = "YahooKeyKey-Source-1.1.2528\Loaders\Windows-IMM\BaseIMEUI\BaseIMEUI.csproj"
+          msbuild $project `
+            /p:Configuration=Release `
+            /p:TargetFrameworkVersion=v2.0 `
+            /p:FrameworkPathOverride="$refDir" `
+            /p:SignAssembly=false `
+            /p:AssemblyOriginatorKeyFile= `
+            /p:OutputPath="$PWD\out\" `
+            /v:minimal 2>&1 | Tee-Object -FilePath build.log
+          $code = $LASTEXITCODE
+          Select-String -Path build.log -Pattern 'error [A-Z]+\d+|error MSB\d+' |
+            Select-Object -First 30 | ForEach-Object { Write-Host "::error file=build.log::$($_.Line.Trim())" }
+          if ($code -ne 0) { exit $code }
+
+      - name: Package
+        shell: pwsh
+        run: |
+          Get-ChildItem out -Filter *.dll | Select-Object Name, Length
+          New-Item -ItemType Directory -Force package | Out-Null
+          Copy-Item out\KeyKeyUI.dll package\
+          Compress-Archive -Path package\* -DestinationPath KeyKeyUI.zip -Force
+
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: KeyKeyUI
+          path: KeyKeyUI.zip
+          if-no-files-found: error
+
+      - name: Upload build log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: keykeyui-build-log
+          path: build.log
+          if-no-files-found: ignore
