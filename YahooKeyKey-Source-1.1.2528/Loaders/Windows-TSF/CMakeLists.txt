@@ -52,3 +52,61 @@ if(MSVC)
     # Static CRT so the DLL can be dropped anywhere.
     set_property(TARGET KeyKeyTSF PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 endif()
+
+# ------------------------------------------------------- RPC probe ----------
+# KeyKeyProbe drives the installed KeyKey server over the same RPC interface the
+# legacy IMM32 loader uses, so the server-side UI can be tested without TSF.
+set(MIDL_EXE "" CACHE FILEPATH "Path to midl.exe")
+if(NOT MIDL_EXE)
+    file(GLOB _midl_candidates
+        "$ENV{ProgramFiles\(x86\)}/Windows Kits/10/bin/*/x64/midl.exe")
+    if(NOT _midl_candidates)
+        file(GLOB _midl_candidates
+            "$ENV{ProgramFiles}/Windows Kits/10/bin/*/x64/midl.exe")
+    endif()
+    if(_midl_candidates)
+        list(SORT _midl_candidates)
+        list(GET _midl_candidates -1 MIDL_EXE)
+    else()
+        find_program(MIDL_EXE midl)
+    endif()
+endif()
+
+if(MIDL_EXE)
+    set(IDL_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../Windows-IMM/BaseIMERPC)
+    set(RPC_DIR ${CMAKE_CURRENT_BINARY_DIR}/rpc)
+    file(MAKE_DIRECTORY ${RPC_DIR})
+    if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+        set(MIDL_ENV x64)
+    else()
+        set(MIDL_ENV win32)
+    endif()
+
+    add_custom_command(
+        OUTPUT ${RPC_DIR}/BIServerRPCInterface_c.c
+        COMMAND ${MIDL_EXE} /nologo /app_config /env ${MIDL_ENV} /out ${RPC_DIR}
+                ${IDL_DIR}/BIServerRPCInterface.idl
+        DEPENDS ${IDL_DIR}/BIServerRPCInterface.idl
+        COMMENT "MIDL: generating the BaseIMEServer RPC client stub")
+
+    add_executable(KeyKeyProbe
+        tools/probe/main.cpp
+        src/KeyKeyRpc.cpp
+        src/KeyTranslation.cpp
+        src/Log.cpp
+        src/midluser.cpp
+        ${RPC_DIR}/BIServerRPCInterface_c.c)
+
+    target_include_directories(KeyKeyProbe PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/src
+        ${RPC_DIR})
+    target_compile_definitions(KeyKeyProbe PRIVATE
+        UNICODE _UNICODE NOMINMAX _CRT_SECURE_NO_WARNINGS)
+    target_link_libraries(KeyKeyProbe PRIVATE rpcrt4 ole32 user32 advapi32 shell32)
+    if(MSVC)
+        target_compile_options(KeyKeyProbe PRIVATE /W3 /EHsc /utf-8)
+        set_property(TARGET KeyKeyProbe PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+    endif()
+else()
+    message(WARNING "midl.exe not found - KeyKeyProbe will not be built")
+endif()

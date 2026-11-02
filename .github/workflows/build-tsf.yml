@@ -34,6 +34,23 @@ jobs:
         with:
           arch: ${{ matrix.arch }}
 
+      - name: Set up MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Build patched KeyKeyUI
+        shell: pwsh
+        run: |
+          nuget install Microsoft.NETFramework.ReferenceAssemblies.net20 -OutputDirectory refpkgs -NonInteractive | Out-Null
+          $refDir = (Get-ChildItem refpkgs -Recurse -Filter mscorlib.dll | Select-Object -First 1).DirectoryName
+          msbuild "YahooKeyKey-Source-1.1.2528\Loaders\Windows-IMM\BaseIMEUI\BaseIMEUI.csproj" `
+            /p:Configuration=Release /p:TargetFrameworkVersion=v2.0 `
+            /p:FrameworkPathOverride="$refDir" /p:SignAssembly=false /p:AssemblyOriginatorKeyFile= `
+            /p:OutputPath="$PWD\keykeyui\out\" /v:minimal 2>&1 | Tee-Object -FilePath keykeyui.log
+          $code = $LASTEXITCODE
+          Select-String -Path keykeyui.log -Pattern 'error [A-Z]+\d+|error MSB\d+' |
+            Select-Object -First 20 | ForEach-Object { Write-Host "::error file=keykeyui.log::$($_.Line.Trim())" }
+          if ($code -ne 0) { exit $code }
+
       - name: Configure
         run: cmake -S YahooKeyKey-Source-1.1.2528/Loaders/Windows-TSF -B build -A ${{ matrix.arch }}
 
@@ -75,7 +92,13 @@ jobs:
           Copy-Item "$packaging/${{ matrix.installer }}" "$stage/install.bat"
           Copy-Item "$packaging/uninstall.bat" $stage
           Copy-Item "$packaging/diagnose.ps1" $stage
+          Copy-Item "$packaging/install-keykeyui.bat" $stage
+          Copy-Item "$packaging/restore-keykeyui.bat" $stage
           Copy-Item "$packaging/README.txt" $stage
+
+          if (Test-Path "keykeyui/out/KeyKeyUI.dll") { Copy-Item "keykeyui/out/KeyKeyUI.dll" $stage }
+          $probe = Get-ChildItem build -Recurse -Filter KeyKeyProbe.exe | Select-Object -First 1
+          if ($probe) { Copy-Item $probe.FullName $stage } else { Write-Host "::warning::KeyKeyProbe was not built" }
 
           Compress-Archive -Path "$stage/*" -DestinationPath "KeyKeyTSF-${{ matrix.arch }}.zip" -Force
           Get-ChildItem "KeyKeyTSF-${{ matrix.arch }}.zip" | Select-Object Name, Length

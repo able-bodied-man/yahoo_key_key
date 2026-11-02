@@ -32,6 +32,25 @@ If Windows blocks the file (Smart App Control), first run
 and reinstall. Otherwise build it locally - a locally produced binary is usually
 accepted: see build.ps1 in the repository.
 
+## The KeyKey engine kit (this folder also carries it)
+
+KeyKeyTSF.dll above is the standalone CangJie input method and does not need
+KeyKey at all. The other three files are for the other approach - a TSF front end
+that drives the *installed* KeyKey engine and shows KeyKey's own bar, candidate
+panel and input buffer:
+
+- KeyKeyUI.dll        rebuilt KeyKey UI assembly. It logs the managed exceptions
+                      that the RPC calls hit to %LOCALAPPDATA%\KeyKeyTSF\keykeyui.log
+                      and no longer lets them abort the call.
+- install-keykeyui.bat   copies it into KeyKey's install folder (elevated), keeping
+                      KeyKeyUI.dll.orig as a backup. restore-keykeyui.bat undoes it.
+- KeyKeyProbe.exe     console tool that drives KeyKey's server over the same RPC
+                      interface the old IMM32 loader uses and prints what comes
+                      back. Run it after installing the patched UI:
+                          KeyKeyProbe.exe hg
+                      It reports whether ShowStatusBar still throws 0xE0434F4D and
+                      what candidates the engine returns for a valid code.
+
 ## Uninstall
 
 Right-click uninstall.bat, run as administrator.
