@@ -38,7 +38,28 @@ jobs:
         run: cmake -S YahooKeyKey-Source-1.1.2528/Loaders/Windows-TSF -B build -A ${{ matrix.arch }}
 
       - name: Build
-        run: cmake --build build --config Release
+        shell: pwsh
+        run: |
+          # Tee the compiler output so failures can be surfaced as annotations
+          # (annotations are readable from the API, the raw step log is not).
+          cmake --build build --config Release 2>&1 | Tee-Object -FilePath build.log
+          $code = $LASTEXITCODE
+          if (-not (Test-Path build.log)) { throw "no build log" }
+          $errors = Select-String -Path build.log -Pattern 'error [A-Z]+\d+|fatal error|LNK\d{4}' |
+                    Select-Object -First 40
+          foreach ($e in $errors) { Write-Host "::error file=build.log::$($e.Line.Trim())" }
+          if ($code -ne 0) {
+            Write-Host "Build exited with $code"
+            exit $code
+          }
+
+      - name: Upload build log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-log-${{ matrix.arch }}
+          path: build.log
+          if-no-files-found: ignore
 
       - name: Package
         shell: pwsh
