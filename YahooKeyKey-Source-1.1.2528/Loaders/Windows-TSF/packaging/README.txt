@@ -32,7 +32,11 @@ If the entry does not appear in the keyboard list, sign out and back in once.
 
 ## If nothing happens
 
-Set the input method, then type a few letters somewhere. A log is written to
+Run `diagnose.ps1` (right-click -> Run with PowerShell) and send `keykeytsf-diag.txt`.
+It prints the COM registration, the TSF profile, whether KeyKey's server is
+running, and the log tail.
+
+The log lives at
 
     %LOCALAPPDATA%\KeyKeyTSF\keykeytsf.log
 

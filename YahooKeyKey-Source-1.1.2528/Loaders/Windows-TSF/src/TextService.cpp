@@ -364,6 +364,19 @@ STDMETHODIMP CTextService::OnTestKeyDown(ITfContext* /*pic*/, WPARAM wParam, LPA
 {
     if (!pfEaten)
         return E_INVALIDARG;
+
+    // If the server was not reachable when the text service activated (KeyKey's
+    // server starts with the legacy IME, so it may only appear later), keep
+    // trying, but not more than once a second.
+    if (!_fServerActive && _pContext) {
+        static DWORD s_lastAttempt = 0;
+        DWORD now = GetTickCount();
+        if (now - s_lastAttempt > 1000) {
+            s_lastAttempt = now;
+            _EnsureServer();
+        }
+    }
+
     // Claim tentatively; OnKeyDown gives the key back when the engine ignores it.
     *pfEaten = (_fServerActive && KKIsCandidateKey(wParam)) ? TRUE : FALSE;
     return S_OK;
@@ -382,8 +395,14 @@ STDMETHODIMP CTextService::OnKeyDown(ITfContext* pic, WPARAM wParam, LPARAM lPar
         return E_INVALIDARG;
     *pfEaten = FALSE;
 
-    if (!_fServerActive)
-        return S_OK;
+    if (!_fServerActive) {
+        if (pic && KKIsCandidateKey(wParam)) {
+            _SetContext(pic);
+            _EnsureServer();
+        }
+        if (!_fServerActive)
+            return S_OK;
+    }
 
     if (pic)
         _SetContext(pic);

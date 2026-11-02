@@ -74,6 +74,7 @@ jobs:
           Copy-Item $dll.FullName "$stage/KeyKeyTSF.dll"
           Copy-Item "$packaging/${{ matrix.installer }}" "$stage/install.bat"
           Copy-Item "$packaging/uninstall.bat" $stage
+          Copy-Item "$packaging/diagnose.ps1" $stage
           Copy-Item "$packaging/README.txt" $stage
 
           Compress-Archive -Path "$stage/*" -DestinationPath "KeyKeyTSF-${{ matrix.arch }}.zip" -Force

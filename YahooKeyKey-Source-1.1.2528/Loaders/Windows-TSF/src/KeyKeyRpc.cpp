@@ -12,6 +12,7 @@
 
 #include <rpc.h>
 #include <lmcons.h>
+#include <shellapi.h>
 
 #include <vector>
 
@@ -215,6 +216,50 @@ const wchar_t* const kServerNames[] = {
     L"BISTakao",      // older Takao naming
 };
 
+// KeyKey's server is normally started at logon or by the legacy IMM32 loader.
+// In a TSF-only session it may simply not be running, and then there is nothing
+// to connect to - so read the install location the installer recorded
+// (BASEIME_SERVER_REGKEY = SOFTWARE\Yahoo\KeyKey, value ServerLocation) and
+// start KeyKeyServer.exe ourselves.
+bool StartKeyKeyServer()
+{
+    static DWORD s_lastAttempt = 0;
+    DWORD now = GetTickCount();
+    if (s_lastAttempt && (now - s_lastAttempt) < 10000)
+        return false;
+    s_lastAttempt = now;
+
+    wchar_t location[MAX_PATH] = { 0 };
+    DWORD size = sizeof(location);
+    LSTATUS status = RegGetValueW(HKEY_LOCAL_MACHINE, L"SOFTWARE\\Yahoo\\KeyKey",
+                                  L"ServerLocation", RRF_RT_REG_SZ | RRF_SUBKEY_WOW6464KEY,
+                                  nullptr, location, &size);
+    if (status != ERROR_SUCCESS) {
+        size = sizeof(location);
+        status = RegGetValueW(HKEY_LOCAL_MACHINE, L"SOFTWARE\\Yahoo\\KeyKey",
+                              L"ServerLocation", RRF_RT_REG_SZ,
+                              nullptr, location, &size);
+    }
+    if (status != ERROR_SUCCESS) {
+        KeyKeyLog(L"StartKeyKeyServer: no ServerLocation in the registry");
+        return false;
+    }
+
+    std::wstring exe(location);
+    if (!exe.empty() && exe.back() != L'\\')
+        exe += L'\\';
+    exe += L"KeyKeyServer.exe";
+
+    if (GetFileAttributesW(exe.c_str()) == INVALID_FILE_ATTRIBUTES) {
+        KeyKeyLog(L"StartKeyKeyServer: '%s' does not exist", exe.c_str());
+        return false;
+    }
+
+    HINSTANCE result = ShellExecuteW(nullptr, L"open", exe.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
+    KeyKeyLog(L"StartKeyKeyServer: launched '%s' (result %d)", exe.c_str(), (int)(INT_PTR)result);
+    return (INT_PTR)result > 32;
+}
+
 std::wstring BuildEndpoint(const wchar_t* serverName)
 {
     std::wstring endpoint(L"ncalrpc:");
@@ -281,7 +326,38 @@ bool KeyKeyRpc::Connect()
         return true;
     }
 
-    KeyKeyLog(L"Connect: no KeyKey server answered; is Yahoo! KeyKey installed and running?");
+    KeyKeyLog(L"Connect: no KeyKey server answered, trying to start it");
+    if (StartKeyKeyServer()) {
+        for (int attempt = 0; attempt < 10; ++attempt) {
+            Sleep(400);
+            for (const wchar_t* serverName : kServerNames) {
+                if (m_stringBinding) {
+                    RpcStringFreeW(&m_stringBinding);
+                    m_stringBinding = nullptr;
+                }
+                std::wstring endpoint = BuildEndpoint(serverName);
+                if (RpcStringBindingComposeW(nullptr, (RPC_WSTR)L"ncalrpc", nullptr,
+                                             (RPC_WSTR)endpoint.c_str(), nullptr,
+                                             &m_stringBinding) != RPC_S_OK) {
+                    m_stringBinding = nullptr;
+                    continue;
+                }
+                if (RpcBindingFromStringBindingW(m_stringBinding, &BIServerRPCInterfaceGlobalHandle) != RPC_S_OK) {
+                    RpcStringFreeW(&m_stringBinding);
+                    m_stringBinding = nullptr;
+                    continue;
+                }
+                BISContext context = nullptr;
+                if (RawOpenConnection(&context) && context) {
+                    m_context = context;
+                    KeyKeyLog(L"Connect: connected to %s after starting the server", serverName);
+                    return true;
+                }
+            }
+        }
+    }
+
+    KeyKeyLog(L"Connect: no KeyKey server answered; is Yahoo! KeyKey installed?");
     return false;
 }
 
