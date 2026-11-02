@@ -275,20 +275,12 @@ bool CTextService::_EnsureServer()
 
     _fServerActive = true;
 
-    _rpc.SetInputBufferFontSize(-16);
-    KeyKeyLog(L"SetInputBufferFontSize: %s (last rpc error 0x%08x)",
-              KeyKeyRpcLastError() ? L"failed" : L"ok", KeyKeyRpcLastError());
-
-    // Hide before showing: the status bar is a plain (non topmost) window owned
-    // by the KeyKey server, and its Show() returns early when it thinks it is
-    // already visible - which leaves it behind the application window.
-    _rpc.HideStatusBar();
-    _rpc.ShowStatusBar();
-    const unsigned long barError = KeyKeyRpcLastError();
-    KeyKeyLog(L"ShowStatusBar: %s (rpc error 0x%08x)",
-              barError ? L"failed" : L"ok", barError);
-
-    KeyKeyLog(L"Server activated (input method '%s')", inputMethodName.c_str());
+    // NOTE: the server-side UI calls (SetInputBufferTraits, ShowStatusBar,
+    // ShowInputBuffer, ShowCandidatePanel, ...) all throw a managed exception
+    // (0xE0434F4D) on this machine, and a faulted call wrecks the connection
+    // state for the keys that follow. Until the text service draws its own
+    // windows, stay on the calls the engine answers: activate + handle key.
+    KeyKeyLog(L"Server activated (input method '%s'), server-side UI disabled", inputMethodName.c_str());
     return true;
 }
 
@@ -368,11 +360,6 @@ STDMETHODIMP CTextService::OnSetFocus(BOOL fForeground)
     }
     else if (_pContext) {
         _EnsureServer();
-        if (_fServerActive) {
-            _rpc.HideStatusBar();
-            _rpc.ShowStatusBar();
-            KeyKeyLog(L"Status bar re-raised on focus (rpc error 0x%08x)", KeyKeyRpcLastError());
-        }
     }
     return S_OK;
 }
@@ -538,7 +525,7 @@ void CTextService::_ApplyResult(KKKeyResult& result)
 {
     const bool hasComposition = !result.combinedComposition.empty();
 
-    if (!result.committed.empty() || hasComposition || result.candidateVisible) {
+    if (!result.committed.empty() || hasComposition) {
         const std::wstring committed = result.committed;
         _RequestEditSession([this, committed](TfEditCookie ec) {
             _CommitText(ec, committed);
@@ -546,29 +533,27 @@ void CTextService::_ApplyResult(KKKeyResult& result)
         });
     }
 
-    if (_caretValid) {
-        _rpc.SetInputBufferPosition(_caretX, _caretY);
-        _rpc.SetCandidatePanelPosition(_caretX, _caretY);
-    }
+    // The text service has no windows of its own yet. Log what the engine
+    // produced so the behaviour is checkable without the server's UI, which
+    // cannot be driven from a TSF thread on this machine.
+    static LONG s_loggedResults = 0;
+    if (s_loggedResults < 40 && (hasComposition || !result.candidatePage.empty() || !result.committed.empty())) {
+        InterlockedIncrement(&s_loggedResults);
 
-    if (hasComposition) {
-        if (!_fInputBufferVisible) {
-            _rpc.ShowInputBuffer();
-            _fInputBufferVisible = true;
+        std::wstring candidates = result.candidatePage;
+        for (wchar_t& ch : candidates) {
+            if (ch == 0xffff)
+                ch = L'|';
         }
-    }
-    else if (_fInputBufferVisible) {
-        _rpc.HideInputBuffer();
-        _fInputBufferVisible = false;
-    }
 
-    if (result.candidateVisible) {
-        _rpc.ShowCandidatePanel();
-        _fCandidateVisible = true;
-    }
-    else if (_fCandidateVisible && !result.shouldUpdateCandidate) {
-        _rpc.HideCandidatePanel();
-        _fCandidateVisible = false;
+        KeyKeyLog(L"result: commit='%s' composing='%s' attrs='%s' cursor=%u candidates='%s' highlight=%u caret=%d,%d",
+                  result.committed.c_str(),
+                  result.combinedComposition.c_str(),
+                  result.combinedCompositionAttribute.c_str(),
+                  result.cursorPosition,
+                  candidates.c_str(),
+                  result.highlightedIndex,
+                  _caretX, _caretY);
     }
 
     if (!result.actionVerb.empty())
