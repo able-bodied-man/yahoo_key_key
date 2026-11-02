@@ -30,6 +30,30 @@ If the entry does not appear in the keyboard list, sign out and back in once.
   Ctrl+C must still work.
 - Alt+Tab away and back: the bar and the buffer disappear and come back.
 
+## If Windows blocks the file (Smart App Control)
+
+Windows 11's Smart App Control refuses unsigned binaries it has no reputation
+for, and a DLL compiled by a GitHub runner has none. Try, in this order:
+
+1. Remove the mark-of-the-web the download added:
+
+       powershell -Command "Unblock-File .\KeyKeyTSF.dll"
+
+   Re-run install.bat. This is often enough, sometimes not.
+2. Build it locally instead (no mark-of-the-web, and a locally produced binary
+   is usually accepted): install Visual Studio 2022 with "Desktop development
+   with C++", then
+
+       powershell -ExecutionPolicy Bypass -File build.ps1
+
+   and run install.bat from the package-x64 folder it creates.
+3. Turn Smart App Control off (Settings > Privacy & security > Windows Security
+   > App & browser control > Smart App Control). Note this is one-way: it cannot
+   be switched back on without resetting Windows.
+
+Signing the DLL with a code-signing certificate also works, but that is a paid
+certificate per year - not worth it for a test build.
+
 ## If nothing happens
 
 Run `diagnose.ps1` (right-click -> Run with PowerShell) and send `keykeytsf-diag.txt`.
