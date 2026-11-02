@@ -26,7 +26,12 @@ if (Test-Path $dll) {
     $machine = [BitConverter]::ToUInt16($bytes, $peOffset + 4)
     $arch = switch ($machine) { 0x8664 { 'x64' } 0x14c { 'x86' } 0xAA64 { 'arm64' } default { "0x{0:x}" -f $machine } }
     Add ("arch:   " + $arch)
-    Add ("blocked: " + (Get-Item $dll -Stream * | Where-Object Stream -eq 'Zone.Identifier'))
+    $motw = Get-Item $dll -Stream * | Where-Object Stream -eq 'Zone.Identifier'
+    if ($motw) {
+        Add "mark-of-the-web: PRESENT - run  Unblock-File .\KeyKeyTSF.dll  and reinstall"
+    } else {
+        Add "mark-of-the-web: none"
+    }
 } else {
     Add "KeyKeyTSF.dll NOT FOUND here"
 }
@@ -61,6 +66,24 @@ if (Test-Path $tip) {
     if ($enabled) { Add "  Enable bit set" } else { Add "  WARNING: no Enable value found under the profile" }
 } else {
     Add "  no CTF profile registered for this CLSID"
+}
+Add ""
+
+Add "== Is the DLL loaded in any application? =="
+$loadedAny = $false
+foreach ($proc in Get-Process) {
+    try {
+        $module = $proc.Modules | Where-Object { $_.ModuleName -eq 'KeyKeyTSF.dll' } | Select-Object -First 1
+        if ($module) {
+            Add ("  " + $proc.ProcessName + " (pid " + $proc.Id + ") <- " + $module.FileName)
+            $loadedAny = $true
+        }
+    } catch { }
+}
+if (-not $loadedAny) {
+    Add "  not loaded anywhere - Windows never pulled the text service into an application."
+    Add "  Close and reopen the app (or reboot) after installing: a process keeps the"
+    Add "  DLL it started with, and Smart App Control can refuse an unblocked-but-unsigned DLL."
 }
 Add ""
 
