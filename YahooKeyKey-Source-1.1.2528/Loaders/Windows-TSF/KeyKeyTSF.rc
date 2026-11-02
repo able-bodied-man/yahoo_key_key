@@ -1,0 +1,5 @@
+// KeyKeyTSF.rc - embeds the CangJie table so the DLL is self-contained
+
+#include "resource.h"
+
+IDR_CANGJIE_CIN RCDATA "../../DataTables/cj-ext.cin"

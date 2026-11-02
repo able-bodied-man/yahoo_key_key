@@ -1,24 +1,28 @@
 //
-// TextService.h - the TSF text service (front end) for Yahoo! KeyKey
+// CangjieService.h - the TSF text service: CangJie engine + its own windows
+//
+// No KeyKey server, no RPC: the table is embedded in this DLL and the two
+// windows are ours, so the input method works on its own.
 //
 
-#ifndef TEXT_SERVICE_H
-#define TEXT_SERVICE_H
+#ifndef CANGJIE_SERVICE_H
+#define CANGJIE_SERVICE_H
 
+#include "CangjieEngine.h"
 #include "KeyKeyCommon.h"
-#include "KeyKeyRpc.h"
+#include "UiWindows.h"
 
 #include <msctf.h>
 
 #include <functional>
 #include <string>
 
-class CTextService : public ITfTextInputProcessorEx,
-                     public ITfThreadMgrEventSink,
-                     public ITfKeyEventSink
+class CangjieService : public ITfTextInputProcessorEx,
+                       public ITfThreadMgrEventSink,
+                       public ITfKeyEventSink
 {
 public:
-    CTextService();
+    CangjieService();
 
     // IUnknown
     STDMETHODIMP QueryInterface(REFIID riid, void** ppvObj) override;
@@ -48,16 +52,16 @@ public:
     STDMETHODIMP OnPreservedKey(ITfContext* pic, REFGUID rguid, BOOL* pfEaten) override;
 
 private:
-    virtual ~CTextService();
+    virtual ~CangjieService();
 
+    void _InitWindows();
     void _InitFocusContext();
     void _SetContext(ITfContext* pic);
-    bool _EnsureServer();
-    void _StopServer();
-    void _ApplyResult(KKKeyResult& result);
     void _CommitText(TfEditCookie ec, const std::wstring& text);
     void _UpdateCaretRect(TfEditCookie ec);
     HRESULT _RequestEditSession(const std::function<void(TfEditCookie)>& body);
+    void _UpdateUi(const EngineResult& result);
+    void _ToggleMode();
 
     LONG _cRef;
     ITfThreadMgr* _pThreadMgr;
@@ -67,13 +71,15 @@ private:
     TfClientId _tfClientId;
     DWORD _dwThreadMgrSinkCookie;
     DWORD _dwKeySinkCookie;
-    bool _fServerActive;
-    bool _fInputBufferVisible;
-    bool _fCandidateVisible;
+
+    CangjieEngine _engine;
+    CandidateWindow _candidateWindow;
+    StatusBarWindow _statusBar;
+    bool _windowsReady;
+    bool _shiftPressedAlone;
     int _caretX;
     int _caretY;
     bool _caretValid;
-    KeyKeyRpc _rpc;
 };
 
-#endif // TEXT_SERVICE_H
+#endif // CANGJIE_SERVICE_H

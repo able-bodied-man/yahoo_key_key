@@ -3,7 +3,7 @@
 //
 
 #include "KeyKeyCommon.h"
-#include "TextService.h"
+#include "CangjieService.h"
 
 #include <msctf.h>
 
@@ -62,7 +62,7 @@ public:
         if (pUnkOuter)
             return CLASS_E_NOAGGREGATION;
 
-        CTextService* pService = new (std::nothrow) CTextService();
+        CangjieService* pService = new (std::nothrow) CangjieService();
         if (!pService)
             return E_OUTOFMEMORY;
 
