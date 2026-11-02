@@ -56,6 +56,7 @@ add_library(KeyKeyTSF SHARED
     src/KeyTranslation.cpp
     src/KeyKeyRpc.cpp
     src/TextService.cpp
+    src/Log.cpp
     src/Module.cpp
     src/midluser.cpp
     KeyKeyTSF.def

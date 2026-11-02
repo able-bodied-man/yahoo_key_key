@@ -8,6 +8,7 @@
 
 #include "KeyKeyRpc.h"
 #include "KeyKeyCommon.h"
+#include "Log.h"
 
 #include <rpc.h>
 #include <lmcons.h>
@@ -200,16 +201,28 @@ std::wstring FromBuffer(const std::vector<wchar_t>& buffer)
     return std::wstring(buffer.data());
 }
 
-// ncalrpc endpoint the server listens on: "ncalrpc:" + user name + "BISBaseIME"
-// (see LFPlatform/Source/RPCHelper.cpp and BaseIMEServer/BaseIMEServer.cpp).
-std::wstring ServerEndpoint()
+// ncalrpc endpoint the server listens on: "ncalrpc:" + user name + server name,
+// exactly as LFPlatform/Source/RPCHelper.cpp composes it.
+//
+// The server name is "BIS" + BASEIME_PRODUCT_NAME, and the product name is a
+// per-distribution build define: the vanilla tree says "BaseIME", the Yahoo!
+// KeyKey distribution says "KeyKey" (BaseIME.vcproj). Getting this wrong means
+// RPC_S_INVALID_ENDPOINT_FORMAT and a front end that silently does nothing, so
+// try the known names instead of guessing one.
+const wchar_t* const kServerNames[] = {
+    L"BISKeyKey",     // Yahoo! KeyKey / Takao distribution
+    L"BISBaseIME",    // vanilla BaseIME build
+    L"BISTakao",      // older Takao naming
+};
+
+std::wstring BuildEndpoint(const wchar_t* serverName)
 {
     std::wstring endpoint(L"ncalrpc:");
     wchar_t userName[UNLEN + 1] = { 0 };
     DWORD length = UNLEN;
     if (GetUserNameW(userName, &length))
         endpoint += userName;
-    endpoint += L"BISBaseIME";
+    endpoint += serverName;
     return endpoint;
 }
 
@@ -231,30 +244,45 @@ bool KeyKeyRpc::Connect()
     if (m_context)
         return true;
 
-    if (!m_stringBinding) {
-        std::wstring endpoint = ServerEndpoint();
+    KeyKeyLogInit();
+
+    for (const wchar_t* serverName : kServerNames) {
+        if (m_stringBinding) {
+            RpcStringFreeW(&m_stringBinding);
+            m_stringBinding = nullptr;
+        }
+
+        std::wstring endpoint = BuildEndpoint(serverName);
         RPC_STATUS status = RpcStringBindingComposeW(
             nullptr, (RPC_WSTR)L"ncalrpc", nullptr,
             (RPC_WSTR)endpoint.c_str(), nullptr, &m_stringBinding);
-        if (status != RPC_S_OK)
-            return false;
+        if (status != RPC_S_OK) {
+            KeyKeyLog(L"Connect: compose '%s' failed (0x%08x)", serverName, status);
+            m_stringBinding = nullptr;
+            continue;
+        }
 
         status = RpcBindingFromStringBindingW(m_stringBinding, &BIServerRPCInterfaceGlobalHandle);
         if (status != RPC_S_OK) {
+            KeyKeyLog(L"Connect: bind '%s' failed (0x%08x)", serverName, status);
             RpcStringFreeW(&m_stringBinding);
             m_stringBinding = nullptr;
-            return false;
+            continue;
         }
+
+        BISContext context = nullptr;
+        if (!RawOpenConnection(&context) || !context) {
+            KeyKeyLog(L"Connect: '%s' did not answer BISOpenConnection", serverName);
+            continue;
+        }
+
+        m_context = context;
+        KeyKeyLog(L"Connect: connected to %s", serverName);
+        return true;
     }
 
-    BISContext context = nullptr;
-    if (!RawOpenConnection(&context) || !context) {
-        m_context = nullptr;
-        return false;
-    }
-
-    m_context = context;
-    return true;
+    KeyKeyLog(L"Connect: no KeyKey server answered; is Yahoo! KeyKey installed and running?");
+    return false;
 }
 
 void KeyKeyRpc::Disconnect()

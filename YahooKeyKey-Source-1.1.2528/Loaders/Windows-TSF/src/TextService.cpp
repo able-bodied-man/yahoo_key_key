@@ -11,6 +11,7 @@
 
 #include "TextService.h"
 #include "KeyTranslation.h"
+#include "Log.h"
 
 #include <msctf.h>
 #include <new>
@@ -178,6 +179,8 @@ STDMETHODIMP CTextService::ActivateEx(ITfThreadMgr* ptim, TfClientId tid, DWORD 
                              &_dwThreadMgrSinkCookie);
     }
 
+    KeyKeyLog(L"ActivateEx: client id %u, thread 0x%x", (unsigned)_tfClientId, GetCurrentThreadId());
+
     _InitFocusContext();
     _EnsureServer();
     return S_OK;
@@ -265,12 +268,15 @@ bool CTextService::_EnsureServer()
         return false;
 
     std::wstring inputMethodName;
-    if (!_rpc.Activate(&inputMethodName))
+    if (!_rpc.Activate(&inputMethodName)) {
+        KeyKeyLog(L"BISActivate failed");
         return false;
+    }
 
     _fServerActive = true;
     _rpc.SetInputBufferFontSize(-16);
     _rpc.ShowStatusBar();
+    KeyKeyLog(L"Server activated (input method '%s')", inputMethodName.c_str());
     return true;
 }
 
@@ -332,6 +338,8 @@ STDMETHODIMP CTextService::OnPopContext(ITfContext* /*pic*/)
 
 STDMETHODIMP CTextService::OnSetFocus(BOOL fForeground)
 {
+    KeyKeyLog(L"KeyEventSink::OnSetFocus(foreground=%d)", (int)fForeground);
+
     if (!fForeground) {
         if (_rpc.IsConnected()) {
             _rpc.HideInputBuffer();
@@ -385,9 +393,20 @@ STDMETHODIMP CTextService::OnKeyDown(ITfContext* pic, WPARAM wParam, LPARAM lPar
         return S_OK;
 
     KKKeyResult result;
+    static LONG s_loggedKeys = 0;
     if (!_rpc.HandleKey(key.keyCode, key.keyModifiers, &result)) {
+        KeyKeyLog(L"HandleKey failed (vk 0x%02x) - dropping the server connection", (unsigned)wParam);
         _fServerActive = false;
         return S_OK;
+    }
+
+    if (s_loggedKeys < 40) {
+        InterlockedIncrement(&s_loggedKeys);
+        KeyKeyLog(L"key vk=0x%02x ovk=0x%04x mods=0x%02x handled=%d committed=%u composing=%u",
+                  (unsigned)wParam, key.keyCode, key.keyModifiers,
+                  (int)result.handled,
+                  (unsigned)result.committed.size(),
+                  (unsigned)result.combinedComposition.size());
     }
 
     if (!result.handled)

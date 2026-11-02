@@ -30,6 +30,16 @@ If the entry does not appear in the keyboard list, sign out and back in once.
   Ctrl+C must still work.
 - Alt+Tab away and back: the bar and the buffer disappear and come back.
 
+## If nothing happens
+
+Set the input method, then type a few letters somewhere. A log is written to
+
+    %LOCALAPPDATA%\KeyKeyTSF\keykeytsf.log
+
+Send that file back if the bar never shows up. The first lines say which server
+endpoint was found ("connected to BISKeyKey") or that no server answered at all
+(which means KeyKey itself is not running).
+
 ## Known gaps in this build
 
 - Clicking a candidate in the panel does nothing yet; use the number keys.

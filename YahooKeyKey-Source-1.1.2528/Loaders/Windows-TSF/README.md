@@ -44,6 +44,17 @@ in, lower-cased unless Shift), or a special code (`Up=30, Down=31, Left=28, Righ
 End=4, PageUp=11, PageDown=12, Tab=9, Esc=27, Space=32, Return=13, Backspace=8, Delete=127`);
 `keyModifiers` uses `Alt=1, Ctrl=4, Shift=8, NumLock=0x20, CapsLock=0x40`.
 
+## The server endpoint is distribution specific
+
+`BASEIME_SERVER_IDENTIFIER` is `"BIS" BASEIME_PRODUCT_NAME`, and the product name is a build define:
+the vanilla tree uses `"BaseIME"`, the Yahoo! KeyKey distribution uses `"KeyKey"`
+(`Loaders/Windows-IMM/BaseIME/BaseIME.vcproj`). KeyKey therefore listens on **`BISKeyKey`**, not
+`BISBaseIME`. The loader tries the known names in order and logs which one answered; guessing a
+single name produces a front end that loads, registers, and silently does nothing.
+
+Diagnostics land in `%LOCALAPPDATA%\KeyKeyTSF\keykeytsf.log` (activation, connect attempts, the
+first 40 keystrokes with their engine answers).
+
 ## Status
 
 - [x] M1 — TSF text service: registers, activates, forwards keys to the server, commits text,
