@@ -121,11 +121,12 @@ jobs:
           %LOCALAPPDATA%\KeyKeyTSF\keykeytsf.log.
           EOF
           )
-          if gh release view tsf-preview >/dev/null 2>&1; then
-            gh release edit tsf-preview --notes "$notes" --title "KeyKey TSF front end (preview)"
+          REPO="${{ github.repository }}"
+          if gh release view tsf-preview --repo "$REPO" >/dev/null 2>&1; then
+            gh release edit tsf-preview --repo "$REPO" --notes "$notes" --title "KeyKey TSF front end (preview)"
           else
-            gh release create tsf-preview --title "KeyKey TSF front end (preview)" --notes "$notes"
+            gh release create tsf-preview --repo "$REPO" --title "KeyKey TSF front end (preview)" --notes "$notes"
           fi
-          gh release upload tsf-preview artifacts/*/*.zip --clobber
-          gh release view tsf-preview --json assets --jq '.assets[] | "\(.name) \(.size)"'
+          gh release upload tsf-preview --repo "$REPO" artifacts/*/*.zip --clobber
+          gh release view tsf-preview --repo "$REPO" --json assets --jq '.assets[] | "\(.name) \(.size)"'
 
