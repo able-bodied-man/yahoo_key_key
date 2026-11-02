@@ -110,18 +110,25 @@ namespace BaseIMEUI
         /// </summary>
         public new void Show()
         {
-            if (base.Visible == true)
-                return;
+            try
+            {
+                if (base.Visible == true)
+                    return;
 
-            if (this.InvokeRequired)
-                this.Invoke(new MethodInvoker(this.Show));
-            else {
-                if (this.m_isSetAlwaysOnTop == false)
-                {
-                    Win32FunctionHelper.ShowWindowTopMost(base.Handle);
-                    this.m_isSetAlwaysOnTop = true;
+                if (this.InvokeRequired)
+                    this.Invoke(new MethodInvoker(this.Show));
+                else {
+                    if (this.m_isSetAlwaysOnTop == false)
+                    {
+                        Win32FunctionHelper.ShowWindowTopMost(base.Handle);
+                        this.m_isSetAlwaysOnTop = true;
+                    }
+                    base.Visible = true;
                 }
-                base.Visible = true;
+            }
+            catch (Exception ex)
+            {
+                UiLog.Write("BIForm.Show failed: " + ex.ToString());
             }
         }
         #endregion

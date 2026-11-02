@@ -59,6 +59,8 @@ namespace BaseIMEUI
 
         public void SetFontHeight(long newHeightInPixel)
         {
+            try
+            {
             using (Graphics g = this.CreateGraphics())
 			{
 	            // @zonble
@@ -86,6 +88,11 @@ namespace BaseIMEUI
                 font.Dispose();
 				g.Dispose();
 			}
+            }
+            catch (Exception ex)
+            {
+                UiLog.Write("BIInputBufferForm.SetFontHeight failed: " + ex.ToString());
+            }
         }
 
         public int BufferHeight

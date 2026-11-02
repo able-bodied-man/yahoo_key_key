@@ -55,6 +55,7 @@
     <Reference Include="System.Drawing" />
     <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Xml" />
+    <Compile Include="UiLog.cs" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="..\..\..\Distributions\Takao\WinBeacon\TakaoTracker.cs">

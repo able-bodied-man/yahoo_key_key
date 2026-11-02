@@ -263,6 +263,8 @@ namespace BaseIMEUI
         /// </summary>
         public new void Show()
         {
+            try
+            {
             if (this.m_shouldDisplay == true)
                 return;
 
@@ -300,6 +302,11 @@ namespace BaseIMEUI
                 }
             }
             this.SetOpacityByConfig();
+            }
+            catch (Exception ex)
+            {
+                UiLog.Write("BIStatusBarForm.Show failed: " + ex.ToString());
+            }
         }
         #endregion
 
