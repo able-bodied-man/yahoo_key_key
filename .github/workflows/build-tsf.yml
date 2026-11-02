@@ -105,15 +105,18 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          set -euo pipefail
-          ls -R artifacts
+          set -uo pipefail
+          REPO="${{ github.repository }}"
+          exec > >(tee publish.log) 2>&1
+
+          ls -R artifacts || true
           notes=$(cat <<'EOF'
           Text Services Framework front end for Yahoo! KeyKey, so the installed
           KeyKey engine can drive apps that only speak TSF (the Microsoft Store
           build of WhatsApp, other WinUI/UWP apps, the Windows 11 shell).
 
           Download KeyKeyTSF-x64.zip for 64-bit apps (WhatsApp, Office x64) and
-          KeyKeyTSF-x86.zip for 32-bit apps. Unzip it, right-click install.bat
+          KeyKeyTSF-Win32.zip for 32-bit apps. Unzip it, right-click install.bat
           and run it as administrator, then add "Yahoo! KeyKey (TSF)" under
           Chinese (Traditional, Taiwan) in the language settings.
 
@@ -121,7 +124,7 @@ jobs:
           %LOCALAPPDATA%\KeyKeyTSF\keykeytsf.log.
           EOF
           )
-          REPO="${{ github.repository }}"
+
           if gh release view tsf-preview --repo "$REPO" >/dev/null 2>&1; then
             gh release edit tsf-preview --repo "$REPO" --notes "$notes" --title "KeyKey TSF front end (preview)"
           else
@@ -130,3 +133,10 @@ jobs:
           gh release upload tsf-preview --repo "$REPO" artifacts/*/*.zip --clobber
           gh release view tsf-preview --repo "$REPO" --json assets --jq '.assets[] | "\(.name) \(.size)"'
 
+      - name: Report publish failure
+        if: failure()
+        shell: bash
+        run: |
+          if [ -f publish.log ]; then
+            tail -25 publish.log | while IFS= read -r line; do echo "::error::$line"; done
+          fi
