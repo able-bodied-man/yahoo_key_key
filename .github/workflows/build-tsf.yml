@@ -2,7 +2,7 @@ name: Build KeyKey TSF loader
 
 on:
   push:
-    branches: [ master, 'tsf/**' ]
+    branches: [ master, 'tsf/**', 'tsf-*' ]
     paths:
       - 'YahooKeyKey-Source-1.1.2528/Loaders/Windows-TSF/**'
       - 'YahooKeyKey-Source-1.1.2528/Loaders/Windows-IMM/BaseIMERPC/**'
@@ -15,8 +15,16 @@ on:
 
 jobs:
   build:
-    name: MSVC x64
+    name: MSVC ${{ matrix.arch }}
     runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x64
+            installer: install_x64.bat
+          - arch: Win32
+            installer: install_x86.bat
 
     steps:
       - uses: actions/checkout@v4
@@ -24,23 +32,35 @@ jobs:
       - name: Set up MSVC
         uses: ilammy/msvc-dev-cmd@v1
         with:
-          arch: x64
+          arch: ${{ matrix.arch }}
 
       - name: Configure
-        run: cmake -S YahooKeyKey-Source-1.1.2528/Loaders/Windows-TSF -B build -A x64
+        run: cmake -S YahooKeyKey-Source-1.1.2528/Loaders/Windows-TSF -B build -A ${{ matrix.arch }}
 
       - name: Build
         run: cmake --build build --config Release
 
-      - name: List output
+      - name: Package
         shell: pwsh
         run: |
-          Get-ChildItem build -Recurse -Filter *.dll |
-            Select-Object FullName, Length | Format-Table -AutoSize
+          $dll = Get-ChildItem build -Recurse -Filter KeyKeyTSF.dll | Select-Object -First 1
+          if (-not $dll) { throw "KeyKeyTSF.dll was not produced" }
+          Write-Host "Built $($dll.FullName) ($($dll.Length) bytes)"
 
-      - name: Upload DLL
+          $packaging = "YahooKeyKey-Source-1.1.2528/Loaders/Windows-TSF/packaging"
+          $stage = "stage/KeyKeyTSF-${{ matrix.arch }}"
+          New-Item -ItemType Directory -Force $stage | Out-Null
+          Copy-Item $dll.FullName "$stage/KeyKeyTSF.dll"
+          Copy-Item "$packaging/${{ matrix.installer }}" "$stage/install.bat"
+          Copy-Item "$packaging/uninstall.bat" $stage
+          Copy-Item "$packaging/README.txt" $stage
+
+          Compress-Archive -Path "$stage/*" -DestinationPath "KeyKeyTSF-${{ matrix.arch }}.zip" -Force
+          Get-ChildItem "KeyKeyTSF-${{ matrix.arch }}.zip" | Select-Object Name, Length
+
+      - name: Upload package
         uses: actions/upload-artifact@v4
         with:
-          name: KeyKeyTSF-x64
-          path: build/Release/KeyKeyTSF.dll
+          name: KeyKeyTSF-${{ matrix.arch }}
+          path: KeyKeyTSF-${{ matrix.arch }}.zip
           if-no-files-found: error

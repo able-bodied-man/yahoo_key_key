@@ -36,9 +36,16 @@ file(MAKE_DIRECTORY ${RPC_DIR})
 
 set(RPC_STUB ${RPC_DIR}/BIServerRPCInterface_c.c)
 
+# midl needs to know the target architecture for the generated stub
+if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+    set(MIDL_ENV x64)
+else()
+    set(MIDL_ENV win32)
+endif()
+
 add_custom_command(
     OUTPUT ${RPC_STUB}
-    COMMAND ${MIDL_EXE} /nologo /app_config /env x64
+    COMMAND ${MIDL_EXE} /nologo /app_config /env ${MIDL_ENV}
             /out ${RPC_DIR}
             ${IDL_DIR}/BIServerRPCInterface.idl
     DEPENDS ${IDL_DIR}/BIServerRPCInterface.idl
