@@ -10,6 +10,7 @@ on:
     branches: [ master, 'tsf/**', 'tsf-*', 'keykeyui/**' ]
     paths:
       - 'YahooKeyKey-Source-1.1.2528/Loaders/Windows-IMM/BaseIMEUI/**'
+      - 'YahooKeyKey-Source-1.1.2528/Distributions/Takao/WinBeacon/**'
       - '.github/workflows/build-keykeyui.yml'
   workflow_dispatch:
 
