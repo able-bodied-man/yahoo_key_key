@@ -104,6 +104,8 @@ private:
     RECT m_itemRects[ItemCount] = {};
     double m_scale = 1.0;
     int m_barHeight = 24;
+    int m_hoverItem = -1;
+    bool m_trackingLeave = false;
 };
 
 #endif // KEYKEY_UI_WINDOWS_H

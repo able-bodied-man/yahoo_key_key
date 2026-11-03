@@ -513,6 +513,42 @@ LRESULT StatusBarWindow::HandleMessage(HWND hwnd, UINT message, WPARAM wParam, L
         return HTCAPTION;
     }
 
+    case WM_MOUSEMOVE: {
+        POINT point = { GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) };
+        int hovered = -1;
+        for (int item = ItemAlphanumeric; item < ItemCount; ++item) {
+            if (PtInRect(&m_itemRects[item], point)) {
+                hovered = item;
+                break;
+            }
+        }
+        // the input method button highlights when its icon is pointed at
+        RECT iconCell = m_itemRects[ItemInputMethod];
+        iconCell.right = iconCell.left + (int)(kBaseIconSize * m_scale + 0.5);
+        if (hovered < 0 && PtInRect(&iconCell, point))
+            hovered = ItemInputMethod;
+
+        if (hovered != m_hoverItem) {
+            m_hoverItem = hovered;
+            InvalidateRect(hwnd, nullptr, FALSE);
+        }
+
+        if (!m_trackingLeave) {
+            TRACKMOUSEEVENT track = { sizeof(track), TME_LEAVE, hwnd, 0 };
+            if (TrackMouseEvent(&track))
+                m_trackingLeave = true;
+        }
+        return 0;
+    }
+
+    case WM_MOUSELEAVE:
+        m_trackingLeave = false;
+        if (m_hoverItem != -1) {
+            m_hoverItem = -1;
+            InvalidateRect(hwnd, nullptr, FALSE);
+        }
+        return 0;
+
     case WM_MOVE:
         return 0;
 
@@ -567,20 +603,19 @@ void StatusBarWindow::PaintInto(HDC dc, const RECT& client)
 
     const int iconTop = (height - iconSize) / 2;
 
-    // The original renders the input method button inside a rounded highlight.
-    {
-        RECT button = m_itemRects[ItemInputMethod];
-        button.top += 2;
-        button.bottom = height - 2;
-        HBRUSH fill = CreateSolidBrush(RGB(146, 106, 224));
-        HPEN edge = CreatePen(PS_SOLID, 1, RGB(214, 198, 246));
-        HGDIOBJ oldBrush = SelectObject(mem, fill);
-        HGDIOBJ oldPen = SelectObject(mem, edge);
-        RoundRect(mem, button.left, button.top, button.right, button.bottom, Scale(6, factor), Scale(6, factor));
-        SelectObject(mem, oldPen);
-        SelectObject(mem, oldBrush);
-        DeleteObject(edge);
-        DeleteObject(fill);
+    // Hover highlight: the original puts a light blue box behind the item the
+    // pointer is over (on the input method button only the icon cell, the name
+    // stays on the bar background).
+    if (m_hoverItem >= 0 && m_hoverItem < ItemCount) {
+        RECT box = m_itemRects[m_hoverItem];
+        if (m_hoverItem == ItemInputMethod)
+            box.right = box.left + iconSize;
+        box.top += 1;
+        box.bottom = height - 1;
+
+        HBRUSH hover = CreateSolidBrush(RGB(168, 212, 240));
+        FillRect(mem, &box, hover);
+        DeleteObject(hover);
     }
 
     blit(m_iconInputMethod, m_itemRects[ItemInputMethod].left, iconTop, iconSize, iconSize, 20, 20);
