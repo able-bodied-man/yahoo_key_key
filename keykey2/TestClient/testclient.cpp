@@ -34,7 +34,7 @@ static void ActivateKeyKeyTip()
     }
 
     FILE* file = nullptr;
-    if (_wfopen_s(&file, L"C:\\Users\\Able\\AppData\\Local\\Temp\\opencode\\tsf-test-activate.txt", L"w") == 0 && file)
+    if (_wfopen_s(&file, L"C:\\Users\\Able\\AppData\\Local\\Temp\\opencode\\keykey2-test-activate.txt", L"w") == 0 && file)
     {
         fwprintf(file, L"create=0x%08X activate=0x%08X\n", static_cast<unsigned>(create), static_cast<unsigned>(activate));
         fclose(file);
@@ -43,7 +43,7 @@ static void ActivateKeyKeyTip()
 
 
 static HWND g_edit = nullptr;
-static const wchar_t* kTextFile = L"C:\\Users\\Able\\AppData\\Local\\Temp\\opencode\\tsf-test-text.txt";
+static const wchar_t* kTextFile = L"C:\\Users\\Able\\AppData\\Local\\Temp\\opencode\\keykey2-test-text.txt";
 
 static void WriteEditText()
 {
@@ -150,13 +150,13 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int show)
     wc.hInstance = instance;
     wc.hCursor = LoadCursorW(nullptr, IDC_ARROW);
     wc.hbrBackground = reinterpret_cast<HBRUSH>(COLOR_WINDOW + 1);
-    wc.lpszClassName = L"KeyKeyTsfTestWindow";
+    wc.lpszClassName = L"KeyKey2TestWindow";
     RegisterClassExW(&wc);
 
     HWND hwnd = CreateWindowExW(
         0,
         wc.lpszClassName,
-        L"KeyKey TSF Test",
+        L"KeyKey 2 Test",
         WS_OVERLAPPEDWINDOW,
         CW_USEDEFAULT, CW_USEDEFAULT, 800, 540,
         nullptr, nullptr, instance, nullptr);

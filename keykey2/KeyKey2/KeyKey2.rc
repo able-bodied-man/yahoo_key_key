@@ -5,12 +5,12 @@ IDI_KEYKEY ICON "Yahoo.ico"
 
 STRINGTABLE
 BEGIN
-    IDS_TEXT_SERVICE "Yahoo! KeyKey (TSF)"
+    IDS_TEXT_SERVICE "Yahoo! KeyKey 2"
 END
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 1,0,4,0
- PRODUCTVERSION 1,0,4,0
+ FILEVERSION 1,1,0,0
+ PRODUCTVERSION 1,1,0,0
  FILEFLAGSMASK 0x3fL
  FILEFLAGS 0x0L
  FILEOS 0x40004L
@@ -22,12 +22,12 @@ BEGIN
         BLOCK "040404b0"
         BEGIN
             VALUE "CompanyName", "Yahoo! Inc."
-            VALUE "FileDescription", "Yahoo! KeyKey TSF Text Service"
-            VALUE "FileVersion", "1.0.4.0"
-            VALUE "InternalName", "KeyKeyTSF"
-            VALUE "OriginalFilename", "KeyKeyTSF.dll"
-            VALUE "ProductName", "Yahoo! KeyKey"
-            VALUE "ProductVersion", "1.0.4.0"
+            VALUE "FileDescription", "Yahoo! KeyKey 2 Text Service"
+            VALUE "FileVersion", "1.1.0.0"
+            VALUE "InternalName", "KeyKey2"
+            VALUE "OriginalFilename", "KeyKey2.dll"
+            VALUE "ProductName", "Yahoo! KeyKey 2"
+            VALUE "ProductVersion", "1.1.0.0"
         END
     END
     BLOCK "VarFileInfo"

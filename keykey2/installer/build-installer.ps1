@@ -1,18 +1,18 @@
 ﻿$ErrorActionPreference = 'Stop'
 
-$tsfRoot = Split-Path -Parent $PSScriptRoot
-$repoRoot = Split-Path -Parent $tsfRoot
+$keykey2Root = Split-Path -Parent $PSScriptRoot
+$repoRoot = Split-Path -Parent $keykey2Root
 $origExe = Join-Path $repoRoot 'orig\YahooKeyKey-Windows-x64-1.1.2535-zh-TW.exe'
 $msiPath = Join-Path $PSScriptRoot 'keykey64.msi'
-$dllPath = Join-Path $tsfRoot 'KeyKeyTSF\build\KeyKeyTSF.dll'
+$dllPath = Join-Path $keykey2Root 'KeyKey2\build\KeyKey2.dll'
 
 if (-not (Test-Path $origExe)) {
     throw "Original KeyKey installer not found: $origExe"
 }
 
 if (-not (Test-Path $dllPath)) {
-    Write-Host 'Building KeyKeyTSF.dll...'
-    Push-Location (Join-Path $tsfRoot 'KeyKeyTSF')
+    Write-Host 'Building KeyKey2.dll...'
+    Push-Location (Join-Path $keykey2Root 'KeyKey2')
     try {
         cmd /c build.cmd
         if ($LASTEXITCODE -ne 0) { throw "build.cmd failed with exit code $LASTEXITCODE" }
@@ -70,12 +70,12 @@ if (-not $iscc) {
 }
 
 Write-Host 'Compiling the installer...'
-& $iscc.FullName (Join-Path $PSScriptRoot 'KeyKeyTSF.iss')
+& $iscc.FullName (Join-Path $PSScriptRoot 'KeyKey2.iss')
 if ($LASTEXITCODE -ne 0) {
     throw "Inno Setup failed with exit code $LASTEXITCODE"
 }
 
-$output = Join-Path $tsfRoot 'release\KeyKeyTSF-1.0.4-x64-Setup.exe'
+$output = Join-Path $keykey2Root 'release\KeyKey2-1.1.0-x64-Setup.exe'
 if (-not (Test-Path $output)) {
     throw "Installer output not found: $output"
 }

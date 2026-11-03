@@ -4,7 +4,7 @@ Third-party notices
 Microsoft Windows-classic-samples
 ---------------------------------
 
-The TSF plumbing patterns in `KeyKeyTSF` are derived from the Microsoft
+The text-service plumbing patterns in `KeyKey2` are derived from the Microsoft
 "Input Method Editor (IME) sample" in
 https://github.com/microsoft/Windows-classic-samples/tree/main/Samples/IME
 

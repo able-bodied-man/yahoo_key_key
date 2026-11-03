@@ -107,13 +107,13 @@ STDMETHODIMP CDisplayAttributeInfo::GetDescription(BSTR* pbstrDesc)
     return *pbstrDesc ? S_OK : E_OUTOFMEMORY;
 }
 
-STDMETHODIMP CDisplayAttributeInfo::GetAttributeInfo(TF_DISPLAYATTRIBUTE* pTSFDisplayAttr)
+STDMETHODIMP CDisplayAttributeInfo::GetAttributeInfo(TF_DISPLAYATTRIBUTE* pDisplayAttr)
 {
-    if (!pTSFDisplayAttr || !m_displayAttribute)
+    if (!pDisplayAttr || !m_displayAttribute)
     {
         return E_INVALIDARG;
     }
-    *pTSFDisplayAttr = *m_displayAttribute;
+    *pDisplayAttr = *m_displayAttribute;
     return S_OK;
 }
 

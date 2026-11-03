@@ -1,5 +1,5 @@
-// KeyKey TSF text service
-// TSF plumbing is based on the Microsoft Windows-classic-samples "SampleIME".
+// KeyKey 2 text service
+// Text-service plumbing is based on the Microsoft Windows-classic-samples "SampleIME".
 // See ../../../THIRD_PARTY_NOTICES.md for the Microsoft sample license.
 
 #pragma once

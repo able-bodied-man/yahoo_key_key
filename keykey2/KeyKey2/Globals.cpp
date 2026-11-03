@@ -10,11 +10,11 @@ namespace Global
     ATOM hiddenWindowClassAtom = 0;
 
     // {F7802624-5E24-4F6A-9BFB-5B525966B27A}
-    const CLSID KeyKeyTSFCLSID =
+    const CLSID KeyKey2CLSID =
     { 0xf7802624, 0x5e24, 0x4f6a, { 0x9b, 0xfb, 0x5b, 0x52, 0x59, 0x66, 0xb2, 0x7a } };
 
     // {21A09CEE-663F-4481-877D-DE1373C678FA}
-    const GUID KeyKeyTSFProfile =
+    const GUID KeyKey2Profile =
     { 0x21a09cee, 0x663f, 0x4481, { 0x87, 0x7d, 0xde, 0x13, 0x73, 0xc6, 0x78, 0xfa } };
 
     // {F27E8F6F-796E-4292-B377-7A40005782AB}
@@ -29,7 +29,7 @@ namespace Global
     const GUID KeyKeyDisplayAttributeHighlight =
     { 0x3634c061, 0x9e74, 0x4831, { 0x92, 0xe0, 0xaf, 0xde, 0xed, 0x18, 0x58, 0xe6 } };
 
-    static const wchar_t kHiddenWindowClass[] = L"KeyKeyTsfHiddenWindow";
+    static const wchar_t kHiddenWindowClass[] = L"KeyKey2HiddenWindow";
 
     static LRESULT CALLBACK HiddenWindowProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
     {

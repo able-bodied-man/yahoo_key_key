@@ -1,4 +1,4 @@
-LIBRARY KeyKeyTSF
+LIBRARY KeyKey2
 
 EXPORTS
     DllGetClassObject   PRIVATE

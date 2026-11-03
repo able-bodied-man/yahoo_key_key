@@ -1,6 +1,6 @@
 ﻿param(
     [switch]$Elevated,
-    [string]$InstallDir = 'C:\Program Files\KeyKeyTSF',
+    [string]$InstallDir = 'C:\Program Files\Yahoo!\KeyKey2',
     [string]$KeyKeyMsi = ''
 )
 
@@ -35,8 +35,8 @@ if (-not (Test-Administrator)) {
     exit
 }
 
-$logPath = Join-Path $env:TEMP 'keykeytsf-install.log'
-$errorPath = Join-Path $env:TEMP 'keykeytsf-install-error.txt'
+$logPath = Join-Path $env:TEMP 'keykey2-install.log'
+$errorPath = Join-Path $env:TEMP 'keykey2-install-error.txt'
 try {
     Start-Transcript -Path $logPath -Append | Out-Null
 } catch {
@@ -56,12 +56,12 @@ trap {
 }
 
 $stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
-$targetDll = Join-Path $InstallDir "KeyKeyTSF-$stamp.dll"
-$subject = 'CN=KeyKey TSF Local Test'
+$targetDll = Join-Path $InstallDir "KeyKey2-$stamp.dll"
+$subject = 'CN=KeyKey 2 Local Test'
 
-$sourceDll = Join-Path $PSScriptRoot 'KeyKeyTSF.dll'
+$sourceDll = Join-Path $PSScriptRoot 'KeyKey2.dll'
 if (-not (Test-Path $sourceDll)) {
-    $sourceDll = Join-Path $PSScriptRoot 'KeyKeyTSF\build\KeyKeyTSF.dll'
+    $sourceDll = Join-Path $PSScriptRoot 'KeyKey2\build\KeyKey2.dll'
 }
 
 if (-not (Test-Path $sourceDll)) {
@@ -120,14 +120,14 @@ $thumbprint = $cert.Thumbprint
 Set-Content -Path (Join-Path $PSScriptRoot 'cert-thumbprint.txt') -Value $thumbprint -Encoding ASCII
 
 # Trust the certificate for local code signing.
-$cerPath = Join-Path $env:TEMP 'KeyKeyTSF.cer'
+$cerPath = Join-Path $env:TEMP 'KeyKey2.cer'
 Export-Certificate -Cert $cert -FilePath $cerPath -Force | Out-Null
 Import-Certificate -FilePath $cerPath -CertStoreLocation Cert:\LocalMachine\Root | Out-Null
 Import-Certificate -FilePath $cerPath -CertStoreLocation Cert:\LocalMachine\TrustedPublisher | Out-Null
 
 # Sign the DLL with the locally trusted certificate. This uses the built-in
 # PowerShell Authenticode support so the release does not require the Windows SDK.
-Write-Host 'Signing the TSF DLL...'
+Write-Host 'Signing the KeyKey 2 DLL...'
 $signature = Set-AuthenticodeSignature -FilePath $sourceDll -Certificate $cert -HashAlgorithm SHA256
 if ($signature.Status -ne 'Valid') {
     throw "Signing failed: $($signature.StatusMessage)"
@@ -137,8 +137,8 @@ Write-Host "Installing to: $targetDll"
 Copy-Item -Force $sourceDll $targetDll
 Set-Content -Path (Join-Path $PSScriptRoot 'installed-path.txt') -Value $targetDll -Encoding Unicode
 
-# Register the in-proc COM server and the TSF language profile.
-Write-Host 'Registering the TSF text service...'
+# Register the in-proc COM server and the language profile.
+Write-Host 'Registering the KeyKey 2 text service...'
 $regsvr = Join-Path $env:SystemRoot 'System32\regsvr32.exe'
 $process = Start-Process -FilePath $regsvr -ArgumentList "/s `"$targetDll`"" -Wait -PassThru
 if ($process.ExitCode -ne 0) {
@@ -148,7 +148,7 @@ if ($process.ExitCode -ne 0) {
 Write-Host "Installed: $targetDll"
 Write-Host "Certificate thumbprint: $thumbprint"
 
-# Add the TSF input tip to the current user's Traditional Chinese profile and
+# Add the input tip to the current user's Traditional Chinese profile and
 # make it the default input method for new processes.
 Write-Host 'Adding the Traditional Chinese input profile...'
 $tip = '0404:{F7802624-5E24-4F6A-9BFB-5B525966B27A}{21A09CEE-663F-4481-877D-DE1373C678FA}'
@@ -196,6 +196,6 @@ for ($attempt = 1; $attempt -le 2 -and -not $profileReady; $attempt++) {
 
 Write-Host ''
 Write-Host 'Installation complete.' -ForegroundColor Green
-Write-Host 'Restart WhatsApp or any already-running app, then select "Yahoo! KeyKey (TSF)" with Win+Space.'
+Write-Host 'Restart WhatsApp or any already-running app, then select "Yahoo! KeyKey 2" with Win+Space.'
 Stop-Transcript
 

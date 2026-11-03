@@ -9,8 +9,8 @@ namespace Global
     extern CRITICAL_SECTION cs;
     extern ATOM hiddenWindowClassAtom;
 
-    extern const CLSID KeyKeyTSFCLSID;
-    extern const GUID KeyKeyTSFProfile;
+    extern const CLSID KeyKey2CLSID;
+    extern const GUID KeyKey2Profile;
     extern const GUID KeyKeyDisplayAttributeInput;
     extern const GUID KeyKeyDisplayAttributeReading;
     extern const GUID KeyKeyDisplayAttributeHighlight;

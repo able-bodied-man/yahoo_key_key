@@ -14,7 +14,7 @@ public:
 
     STDMETHODIMP GetGUID(GUID* pguid) override;
     STDMETHODIMP GetDescription(BSTR* pbstrDesc) override;
-    STDMETHODIMP GetAttributeInfo(TF_DISPLAYATTRIBUTE* pTSFDisplayAttr) override;
+    STDMETHODIMP GetAttributeInfo(TF_DISPLAYATTRIBUTE* pDisplayAttr) override;
     STDMETHODIMP SetAttributeInfo(const TF_DISPLAYATTRIBUTE* ptfDisplayAttr) override;
     STDMETHODIMP Reset() override;
 

@@ -1,10 +1,10 @@
 ﻿param(
-    [string]$InstallDir = 'C:\Program Files\KeyKeyTSF'
+    [string]$InstallDir = 'C:\Program Files\Yahoo!\KeyKey2'
 )
 
 $ErrorActionPreference = 'Continue'
 
-$logPath = Join-Path $env:TEMP 'keykeytsf-uninstall.log'
+$logPath = Join-Path $env:TEMP 'keykey2-uninstall.log'
 try {
     Start-Transcript -Path $logPath -Append | Out-Null
 } catch {
@@ -28,7 +28,7 @@ if (Test-Path $installedPathFile) {
     }
 }
 
-# Remove the TSF profile and COM registration directly as well, in case a DLL
+# Remove the language profile and COM registration directly as well, in case a DLL
 # was still loaded and could not unregister itself.
 & reg.exe delete "HKLM\SOFTWARE\Microsoft\CTF\TIP\$clsid" /f | Out-Null
 & reg.exe delete "HKLM\SOFTWARE\Classes\CLSID\$clsid" /f | Out-Null
@@ -42,7 +42,7 @@ if (Test-Path $thumbprintFile) {
 }
 if (-not $thumbprint) {
     $cert = Get-ChildItem Cert:\LocalMachine\My |
-        Where-Object { $_.Subject -eq 'CN=KeyKey TSF Local Test' } |
+        Where-Object { $_.Subject -eq 'CN=KeyKey 2 Local Test' } |
         Select-Object -First 1
     if ($cert) {
         $thumbprint = $cert.Thumbprint
@@ -57,7 +57,7 @@ if ($thumbprint) {
     }
 }
 
-# Remove the TSF input tip from the user's language list.
+# Remove the input tip from the user's language list.
 try {
     $list = Get-WinUserLanguageList
     $changed = $false
@@ -97,15 +97,15 @@ Remove-Item -Force $thumbprintFile -ErrorAction SilentlyContinue
 function Register-DeleteOnReboot {
     param([string]$Path)
 
-    if (-not ('KeyKeyTSF.NativeMethods' -as [type])) {
-        Add-Type -Namespace KeyKeyTSF -Name NativeMethods -MemberDefinition @'
+    if (-not ('KeyKey2.NativeMethods' -as [type])) {
+        Add-Type -Namespace KeyKey2 -Name NativeMethods -MemberDefinition @'
 [System.Runtime.InteropServices.DllImport("kernel32.dll", SetLastError = true, CharSet = System.Runtime.InteropServices.CharSet.Unicode)]
 public static extern bool MoveFileEx(string lpExistingFileName, string lpNewFileName, int dwFlags);
 '@
     }
 
     # MOVEFILE_DELAY_UNTIL_REBOOT
-    return [KeyKeyTSF.NativeMethods]::MoveFileEx($Path, $null, 0x4)
+    return [KeyKey2.NativeMethods]::MoveFileEx($Path, $null, 0x4)
 }
 
 $scheduledForReboot = @()
@@ -132,7 +132,7 @@ if (Test-Path $InstallDir) {
     }
 }
 
-Write-Host 'KeyKey TSF unregistered. Restart Explorer/WhatsApp/Notepad to release any loaded DLL copies.'
+Write-Host 'KeyKey 2 unregistered. Restart Explorer/WhatsApp/Notepad to release any loaded DLL copies.'
 if ($scheduledForReboot.Count -gt 0) {
     Write-Host 'Some files are in use and will be removed the next time Windows restarts.' -ForegroundColor Yellow
 }

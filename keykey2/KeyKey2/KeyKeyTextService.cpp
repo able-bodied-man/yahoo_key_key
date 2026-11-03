@@ -21,7 +21,7 @@ namespace
         if (debugEnabled < 0)
         {
             wchar_t value[8] = {};
-            debugEnabled = GetEnvironmentVariableW(L"KEYKEY_TSF_DEBUG", value, 8) ? 1 : 0;
+            debugEnabled = GetEnvironmentVariableW(L"KEYKEY2_DEBUG", value, 8) ? 1 : 0;
         }
         if (!debugEnabled)
         {
@@ -34,7 +34,7 @@ namespace
         {
             return;
         }
-        std::wstring file = std::wstring(path) + L"KeyKeyTSF.log";
+        std::wstring file = std::wstring(path) + L"KeyKey2.log";
 
         FILE* stream = nullptr;
         if (_wfopen_s(&stream, file.c_str(), L"a") != 0 || !stream)
@@ -124,7 +124,7 @@ namespace
     }
 }
 
-namespace KeyKeyTsf
+namespace KeyKey2
 {
     CKeyKeyTextService* ActiveTextService()
     {
@@ -261,7 +261,7 @@ STDMETHODIMP CKeyKeyTextService::ActivateEx(ITfThreadMgr* threadMgr, TfClientId 
 
     m_hwnd = CreateWindowExW(
         0,
-        L"KeyKeyTsfHiddenWindow",
+        L"KeyKey2HiddenWindow",
         L"",
         0, 0, 0, 0, 0,
         HWND_MESSAGE,

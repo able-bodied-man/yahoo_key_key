@@ -14,7 +14,7 @@ namespace KeyKey
     class KeyTranslator
     {
     public:
-        // Translate a TSF key-down event into the legacy KeyKey key code contract.
+        // Translate a text-service key-down event into the legacy KeyKey key code contract.
         static TranslatedKey TranslateKeyDown(WPARAM wParam, LPARAM lParam);
 
         // Translate the standalone left-shift release that toggles alphanumeric mode.

@@ -129,7 +129,7 @@ private:
     bool m_keyHandlerActive;
 };
 
-namespace KeyKeyTsf
+namespace KeyKey2
 {
     CKeyKeyTextService* ActiveTextService();
 }

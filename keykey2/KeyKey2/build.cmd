@@ -48,12 +48,12 @@ if errorlevel 1 exit /b 1
 cl /nologo /c /W3 /DUNICODE /D_UNICODE /I. /Igenerated /Fobuild\obj\BIClientRPCInterface_s.obj generated\BIClientRPCInterface_s.c
 if errorlevel 1 exit /b 1
 
-rc /nologo /fo build\KeyKeyTSF.res KeyKeyTSF.rc
+rc /nologo /fo build\KeyKey2.res KeyKey2.rc
 if errorlevel 1 exit /b 1
 
-link /nologo /DLL /MACHINE:X64 /OUT:build\KeyKeyTSF.dll /DEF:KeyKeyTSF.def ^
-    build\obj\*.obj build\KeyKeyTSF.res ^
+link /nologo /DLL /MACHINE:X64 /OUT:build\KeyKey2.dll /DEF:KeyKey2.def ^
+    build\obj\*.obj build\KeyKey2.res ^
     ole32.lib oleaut32.lib uuid.lib rpcrt4.lib shell32.lib advapi32.lib user32.lib gdi32.lib shlwapi.lib
 
 if errorlevel 1 exit /b 1
-echo Built build\KeyKeyTSF.dll
+echo Built build\KeyKey2.dll

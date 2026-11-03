@@ -3,7 +3,7 @@
 // Text service identity
 #define TEXTSERVICE_MODEL        L"Apartment"
 #define TEXTSERVICE_LANGID       MAKELANGID(LANG_CHINESE, SUBLANG_CHINESE_TRADITIONAL)
-#define TEXTSERVICE_DESC         L"Yahoo! KeyKey (TSF)"
+#define TEXTSERVICE_DESC         L"Yahoo! KeyKey 2"
 #define TEXTSERVICE_ICON_INDEX   -IDI_KEYKEY
 
 #define CLSID_STRLEN   38
@@ -19,7 +19,7 @@
 #define KEYKEY_FAKEKEY_MODIFIER           0xffff
 #define BIS_MAX_STRING_LENGTH             4096
 
-// Window messages used to marshal server callbacks onto the TSF thread.
+// Window messages used to marshal server callbacks onto the text-service thread.
 #define WM_KEYKEY_FAKE_KEY   (WM_USER + 1)
 
 // OpenVanilla key codes (must match Frameworks/OpenVanilla/Headers/OVKey.h)

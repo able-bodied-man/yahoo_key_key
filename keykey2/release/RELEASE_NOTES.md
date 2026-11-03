@@ -1,14 +1,27 @@
-﻿# KeyKey TSF 1.0.4
+# Yahoo! KeyKey 2 1.1.0
 
-A TSF text-service bridge that makes the legacy Yahoo! KeyKey input method work
-in modern Windows text clients, including WhatsApp from the Microsoft Store.
+Yahoo! KeyKey 2 is a Windows text-service bridge that makes the legacy Yahoo!
+KeyKey input method work in modern Windows text clients, including WhatsApp
+from the Microsoft Store.
+
+## New in 1.1.0
+
+- Renamed the product to **Yahoo! KeyKey 2**; the old name is no longer used
+  anywhere in the product, DLL, installer, logs, or documentation.
+- The default install folder is now `C:\Program Files\Yahoo!\KeyKey2`.
+  Upgrading from 1.0.x migrates to the new folder automatically.
+- The service DLL is now `KeyKey2.dll` and release files use the `KeyKey2-`
+  prefix.
+- Diagnostics use `KEYKEY2_DEBUG` and write `%TEMP%\KeyKey2.log`.
+- The registration debug log now uses `%TEMP%` instead of a hard-coded
+  user-specific path.
 
 ## New in 1.0.4
 
 - Fixed the input profile not being added on a fresh install. The installer
   previously passed a whole language list to `List.Add`, which failed with
-  "Cannot find an overload for Add and the argument count 1", so
-  **Yahoo! KeyKey (TSF)** never appeared in Win+Space.
+  "Cannot find an overload for Add and the argument count 1", so the profile
+  never appeared in Win+Space.
 - The installer now reads the language list back after setting it and retries
   once if the profile is missing.
 - If the profile still cannot be added, the installer prints an actionable
@@ -16,16 +29,15 @@ in modern Windows text clients, including WhatsApp from the Microsoft Store.
 
 ## New in 1.0.3
 
-- A single `KeyKeyTSF-1.0.4-x64-Setup.exe` installer replaces the manual ZIP
+- A single `KeyKey2-1.1.0-x64-Setup.exe` installer replaces the manual ZIP
   workflow.
 - The installer bundles the original Yahoo! KeyKey 1.1.2535 MSI and installs it
   silently when KeyKey is not already present.
 - The wizard is built with Inno Setup and uses English text, so the garbled
   legacy `setup64.exe` dialogs no longer appear.
-- The TSF bridge installs to `C:\Program Files\Yahoo! KeyKey TSF`.
-- Uninstall removes the TSF DLLs, the TSF/COM registration, the local
-  certificate, and the input profile. Files that are still loaded by a running
-  app are scheduled for deletion on the next restart.
+- Uninstall removes the DLLs, the COM registration, the local certificate, and
+  the input profile. Files that are still loaded by a running app are scheduled
+  for deletion on the next restart.
 - The uninstaller no longer reports failure after a successful cleanup.
 
 ## Installer fixes in 1.0.1
@@ -42,21 +54,22 @@ in modern Windows text clients, including WhatsApp from the Microsoft Store.
 
 ## What is included
 
-- `KeyKeyTSF-1.0.4-x64-Setup.exe` - one-step installer (recommended)
-- `KeyKeyTSF-1.0.4-x64.zip` - manual installation for advanced users
-- `KeyKeyTSF.dll` (x64) - TSF text service
-- `install.ps1` - local code signing, installation, COM/TSF registration, and
+- `KeyKey2-1.1.0-x64-Setup.exe` - one-step installer (recommended)
+- `KeyKey2-1.1.0-x64.zip` - manual installation for advanced users
+- `KeyKey2.dll` (x64) - Windows text service
+- `install.ps1` - local code signing, installation, COM registration, and
   input-profile setup
-- `uninstall.ps1` - removes the TSF profile, COM registration, certificate, and
-  input-language entry
+- `uninstall.ps1` - removes the language profile, COM registration,
+  certificate, and input-language entry
 - `INSTALL.txt` - quick installation and troubleshooting instructions
 
 ## Why a bridge
 
 The original KeyKey client is an IMM32 IME. The Store WhatsApp app is a
-WinUI 3 / WebView2 application and uses TSF. This release keeps the original
-KeyKey engine and data in `KeyKeyServer.exe`, and replaces only the Windows
-input-client layer with a TSF text service.
+WinUI 3 / WebView2 application and uses the modern Windows text-input
+framework. This release keeps the original KeyKey engine and data in
+`KeyKeyServer.exe`, and replaces only the Windows input-client layer with a
+text service.
 
 ## Requirements
 
@@ -67,11 +80,11 @@ input-client layer with a TSF text service.
 ## Verification
 
 - Fresh install with no `zh-Hant-TW` entry: the installer added the language and
-  the **Yahoo! KeyKey (TSF)** profile, and recorded it in the language list.
-- Silent install and silent uninstall both exit with code 0 and leave no TSF
-  files or registry keys behind.
-- Notepad/RichEdit: Cangjie `onf` + `Space` committed `你` (U+4F60).
-- WhatsApp Store x64: the TSF service loaded in `WhatsApp.Root.exe`.
+  the **Yahoo! KeyKey 2** profile, and recorded it in the language list.
+- Silent install and silent uninstall both exit with code 0 and leave no files
+  or registry keys behind.
+- Notepad: Cangjie `onf` + `Space` committed `你` (U+4F60).
+- WhatsApp Store x64: the text service loaded in `WhatsApp.Root.exe`.
 
 ## Notes
 

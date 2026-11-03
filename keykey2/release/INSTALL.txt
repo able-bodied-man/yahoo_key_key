@@ -1,5 +1,5 @@
-﻿Yahoo! KeyKey TSF bridge 1.0.4 (x64)
-====================================
+Yahoo! KeyKey 2 1.1.0 (x64)
+===========================
 
 Requirements
 ------------
@@ -8,13 +8,13 @@ Requirements
 
 Install with the EXE installer (recommended)
 -------------------------------------------
-1. Run KeyKeyTSF-1.0.4-x64-Setup.exe.
+1. Run KeyKey2-1.1.0-x64-Setup.exe.
 2. Approve the UAC prompt.
 3. Follow the English wizard. The default folder is:
-   C:\Program Files\Yahoo! KeyKey TSF
+   C:\Program Files\Yahoo!\KeyKey2
 4. Restart WhatsApp (or any app that was already open).
 5. Focus a text box and press Win+Space until
-   "Yahoo! KeyKey (TSF)" is selected.
+   "Yahoo! KeyKey 2" is selected.
 
 If Yahoo! KeyKey 1.1.2535 is not installed, the installer installs the bundled
 original KeyKey engine silently first. If KeyKey is already installed, it is
@@ -33,17 +33,17 @@ Install from the ZIP (advanced)
 
 3. Restart WhatsApp (or any app that was already open).
 4. Focus a text box and press Win+Space until
-   "Yahoo! KeyKey (TSF)" is selected.
+   "Yahoo! KeyKey 2" is selected.
 
 The ZIP installer creates a local code-signing certificate, trusts it on this
-machine, signs the DLL, installs it under C:\Program Files\KeyKeyTSF, and
-registers the TSF profile. It also adds the Traditional Chinese input profile
-to the current user. Yahoo! KeyKey must already be installed.
+machine, signs the DLL, installs it under C:\Program Files\Yahoo!\KeyKey2, and
+registers the language profile. It also adds the Traditional Chinese input
+profile to the current user. Yahoo! KeyKey must already be installed.
 
 Troubleshooting
 ---------------
-- Set KEYKEY_TSF_DEBUG=1 for the target app, restart it, and read
-  %TEMP%\KeyKeyTSF.log.
+- Set KEYKEY2_DEBUG=1 for the target app, restart it, and read
+  %TEMP%\KeyKey2.log.
 - Restart ctfmon.exe / TextInputHost.exe (elevated) if the profile does not
   appear.
 - Make sure KeyKeyServer.exe is installed and the registry value
@@ -52,8 +52,8 @@ Troubleshooting
 Uninstall
 ---------
 Use "Apps & features" / "Add or remove programs" and remove
-"Yahoo! KeyKey TSF". The uninstaller removes the TSF registration, certificate,
-and input profile. If a running app still holds a TSF DLL, the file is removed
+"Yahoo! KeyKey 2". The uninstaller removes the registration, certificate,
+and input profile. If a running app still holds the DLL, the file is removed
 on the next Windows restart.
 
 For the ZIP installation, run uninstall.ps1 from an elevated PowerShell.
@@ -64,4 +64,3 @@ Limitations
 - Reuses the legacy out-of-process KeyKey server and its WinForms UI.
 - The local test certificate is intended for local installation only. Use a
   real code-signing certificate for public distribution.
-

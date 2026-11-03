@@ -51,7 +51,7 @@ namespace KeyKey
             return Make(OVKeyCode::Space, OVKeyMask::Shift);
         }
 
-        // Ctrl-Space is reserved by Windows / TSF.
+        // Ctrl-Space is reserved by Windows / the text service.
         if (vk == VK_SPACE && IsKeyDown(keyboardState, VK_CONTROL))
         {
             return TranslatedKey();

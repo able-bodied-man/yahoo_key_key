@@ -97,7 +97,7 @@ STDAPI DllGetClassObject(REFCLSID rclsid, REFIID riid, void** ppv)
     }
     *ppv = nullptr;
 
-    if (!IsEqualGUID(rclsid, Global::KeyKeyTSFCLSID))
+    if (!IsEqualGUID(rclsid, Global::KeyKey2CLSID))
     {
         return CLASS_E_CLASSNOTAVAILABLE;
     }
@@ -152,7 +152,7 @@ STDAPI DllUnregisterServer(void)
 
 extern "C" void BICRequestSendFakeKey(void)
 {
-    CKeyKeyTextService* service = KeyKeyTsf::ActiveTextService();
+    CKeyKeyTextService* service = KeyKey2::ActiveTextService();
     if (service)
     {
         service->PostFakeKeyRequest();

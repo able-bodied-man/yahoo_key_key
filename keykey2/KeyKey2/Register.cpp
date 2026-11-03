@@ -5,8 +5,16 @@
 
 static void LogRegistration(const wchar_t* step, HRESULT hr)
 {
+    wchar_t tempPath[MAX_PATH] = {};
+    DWORD length = GetTempPathW(MAX_PATH, tempPath);
+    if (!length)
+    {
+        return;
+    }
+
+    std::wstring logPath = std::wstring(tempPath) + L"keykey2-register.log";
     FILE* file = nullptr;
-    if (_wfopen_s(&file, L"C:\\Users\\Able\\AppData\\Local\\Temp\\opencode\\keykeytsf-register.log", L"a") == 0 && file)
+    if (_wfopen_s(&file, logPath.c_str(), L"a") == 0 && file)
     {
         fwprintf(file, L"%s: 0x%08X\n", step, static_cast<unsigned int>(hr));
         fclose(file);
@@ -52,9 +60,9 @@ BOOL RegisterProfiles()
 
     size_t descriptionLength = wcslen(TEXTSERVICE_DESC);
     hr = manager->RegisterProfile(
-        Global::KeyKeyTSFCLSID,
+        Global::KeyKey2CLSID,
         TEXTSERVICE_LANGID,
-        Global::KeyKeyTSFProfile,
+        Global::KeyKey2Profile,
         TEXTSERVICE_DESC,
         static_cast<ULONG>(descriptionLength),
         iconFile,
@@ -81,7 +89,7 @@ void UnregisterProfiles()
         reinterpret_cast<void**>(&manager));
     if (SUCCEEDED(hr) && manager)
     {
-        manager->UnregisterProfile(Global::KeyKeyTSFCLSID, TEXTSERVICE_LANGID, Global::KeyKeyTSFProfile, 0);
+        manager->UnregisterProfile(Global::KeyKey2CLSID, TEXTSERVICE_LANGID, Global::KeyKey2Profile, 0);
         manager->Release();
     }
 }
@@ -104,7 +112,7 @@ BOOL RegisterCategories()
     int index = 0;
     for (const GUID& category : kSupportCategories)
     {
-        hr = manager->RegisterCategory(Global::KeyKeyTSFCLSID, category, Global::KeyKeyTSFCLSID);
+        hr = manager->RegisterCategory(Global::KeyKey2CLSID, category, Global::KeyKey2CLSID);
         wchar_t step[64] = {};
         StringCchPrintfW(step, 64, L"RegisterCategory[%d]", index++);
         LogRegistration(step, hr);
@@ -130,7 +138,7 @@ void UnregisterCategories()
 
     for (const GUID& category : kSupportCategories)
     {
-        manager->UnregisterCategory(Global::KeyKeyTSFCLSID, category, Global::KeyKeyTSFCLSID);
+        manager->UnregisterCategory(Global::KeyKey2CLSID, category, Global::KeyKey2CLSID);
     }
 
     manager->Release();
@@ -139,7 +147,7 @@ void UnregisterCategories()
 BOOL RegisterServer()
 {
     wchar_t clsid[64] = {};
-    if (!GuidToKey(Global::KeyKeyTSFCLSID, clsid, 64))
+    if (!GuidToKey(Global::KeyKey2CLSID, clsid, 64))
     {
         return FALSE;
     }
@@ -199,7 +207,7 @@ BOOL RegisterServer()
 void UnregisterServer()
 {
     wchar_t clsid[64] = {};
-    if (!GuidToKey(Global::KeyKeyTSFCLSID, clsid, 64))
+    if (!GuidToKey(Global::KeyKey2CLSID, clsid, 64))
     {
         return;
     }
