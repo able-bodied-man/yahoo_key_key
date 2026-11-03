@@ -3,6 +3,7 @@
 //
 
 #include "UiWindows.h"
+#include "resource.h"
 
 #include <windowsx.h>
 
@@ -263,6 +264,33 @@ void CandidateWindow::PaintInto(HDC dc, const RECT& client)
 }
 
 // ------------------------------------------------------------------ status bar
+//
+// Geometry mirrors KeyKey's own bar: 23 px high, the 32x23 head graphic, the
+// input method icon plus its name, then five 20x20 tool icons, then the 13x23
+// tail, all over barbg.bmp tiled across the width.
+
+namespace {
+
+const int kBarHeight = 23;
+const int kHeadWidth = 32;
+const int kTailWidth = 13;
+const int kIconSize = 20;
+const int kItemGap = 2;
+const int kTextGap = 3;
+const int kLeftPadding = 2;
+
+int TextWidth(HDC dc, HFONT font, const std::wstring& text)
+{
+    if (text.empty())
+        return 0;
+    HFONT old = (HFONT)SelectObject(dc, font);
+    SIZE size = { 0, 0 };
+    GetTextExtentPoint32W(dc, text.c_str(), (int)text.size(), &size);
+    SelectObject(dc, old);
+    return size.cx;
+}
+
+} // namespace
 
 bool StatusBarWindow::Create(HINSTANCE instance)
 {
@@ -279,34 +307,100 @@ bool StatusBarWindow::Create(HINSTANCE instance)
     if (!RegisterClassExW(&wc) && GetLastError() != ERROR_CLASS_ALREADY_EXISTS)
         return false;
 
+    m_background = LoadBitmapW(instance, MAKEINTRESOURCEW(IDB_BAR_BG));
+    m_head = LoadBitmapW(instance, MAKEINTRESOURCEW(IDB_BAR_HEAD));
+    m_tail = LoadBitmapW(instance, MAKEINTRESOURCEW(IDB_BAR_TAIL));
+    m_iconInputMethod = LoadBitmapW(instance, MAKEINTRESOURCEW(IDB_ICON_CANGJIE));
+    m_iconChinese = LoadBitmapW(instance, MAKEINTRESOURCEW(IDB_ICON_CHINESE));
+    m_iconEnglish = LoadBitmapW(instance, MAKEINTRESOURCEW(IDB_ICON_ENGLISH));
+    m_iconZhTw = LoadBitmapW(instance, MAKEINTRESOURCEW(IDB_ICON_ZH_TW));
+    m_iconZhCn = LoadBitmapW(instance, MAKEINTRESOURCEW(IDB_ICON_ZH_CN));
+    m_iconHalfWidth = LoadBitmapW(instance, MAKEINTRESOURCEW(IDB_ICON_HALFWIDTH));
+    m_iconFullWidth = LoadBitmapW(instance, MAKEINTRESOURCEW(IDB_ICON_FULLWIDTH));
+    m_iconSymbolOpen = LoadBitmapW(instance, MAKEINTRESOURCEW(IDB_ICON_SYMBOL_OPEN));
+    m_iconSymbolClose = LoadBitmapW(instance, MAKEINTRESOURCEW(IDB_ICON_SYMBOL_CLOSE));
+    m_iconConfig = LoadBitmapW(instance, MAKEINTRESOURCEW(IDB_ICON_CONFIG));
+
     m_window = CreateWindowExW(WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE | WS_EX_TOPMOST,
                                kStatusBarClass, L"", WS_POPUP,
-                               0, 0, 10, 10, nullptr, nullptr, instance, this);
+                               0, 0, 10, kBarHeight, nullptr, nullptr, instance, this);
     if (!m_window)
         return false;
 
     SetWindowLongPtrW(m_window, GWLP_USERDATA, (LONG_PTR)this);
-
-    RECT workArea = { 0, 0, 0, 0 };
-    SystemParametersInfoW(SPI_GETWORKAREA, 0, &workArea, 0);
-    SetWindowPos(m_window, HWND_TOPMOST,
-                 workArea.right - 190, workArea.bottom - 40, 180, 24,
-                 SWP_NOACTIVATE);
+    Layout();
     return true;
 }
 
 void StatusBarWindow::Destroy()
 {
+    if (m_memoryDc) { DeleteDC(m_memoryDc); m_memoryDc = nullptr; }
+    if (m_canvas) { DeleteObject(m_canvas); m_canvas = nullptr; }
+    HBITMAP* bitmaps[] = { &m_background, &m_head, &m_tail, &m_iconInputMethod,
+                           &m_iconChinese, &m_iconEnglish, &m_iconZhTw, &m_iconZhCn,
+                           &m_iconHalfWidth, &m_iconFullWidth, &m_iconSymbolOpen,
+                           &m_iconSymbolClose, &m_iconConfig };
+    for (HBITMAP* bitmap : bitmaps) {
+        if (*bitmap) { DeleteObject(*bitmap); *bitmap = nullptr; }
+    }
     if (m_window) {
         DestroyWindow(m_window);
         m_window = nullptr;
     }
 }
 
+void StatusBarWindow::Layout()
+{
+    if (!m_window)
+        return;
+
+    HDC dc = GetDC(m_window);
+    HFONT font = CreateFontW(-12, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
+                             DEFAULT_CHARSET, OUT_TT_PRECIS, CLIP_DEFAULT_PRECIS,
+                             CLEARTYPE_QUALITY, DEFAULT_PITCH, L"Tahoma");
+    const int nameWidth = TextWidth(dc, font, m_inputMethodName);
+    DeleteObject(font);
+    ReleaseDC(m_window, dc);
+
+    int x = kHeadWidth + kLeftPadding;
+    m_itemRects[ItemInputMethod].left = x;
+    m_itemRects[ItemInputMethod].top = 0;
+    m_itemRects[ItemInputMethod].right = x + kIconSize + kTextGap + nameWidth + 4;
+    m_itemRects[ItemInputMethod].bottom = kBarHeight;
+    x = m_itemRects[ItemInputMethod].right;
+
+    for (int item = ItemAlphanumeric; item < ItemCount; ++item) {
+        m_itemRects[item].left = x;
+        m_itemRects[item].top = (kBarHeight - kIconSize) / 2;
+        m_itemRects[item].right = x + kIconSize;
+        m_itemRects[item].bottom = m_itemRects[item].top + kIconSize;
+        x += kIconSize + kItemGap;
+    }
+
+    const int width = x + kTailWidth;
+
+    RECT current;
+    GetWindowRect(m_window, &current);
+    RECT workArea = { 0, 0, 0, 0 };
+    SystemParametersInfoW(SPI_GETWORKAREA, 0, &workArea, 0);
+
+    // Keep the position the user dragged it to, otherwise bottom-right.
+    int left = current.left;
+    int top = current.top;
+    if (left == 0 && top == 0) {
+        left = workArea.right - width - 20;
+        top = workArea.bottom - kBarHeight - 20;
+    }
+
+    SetWindowPos(m_window, HWND_TOPMOST, left, top, width, kBarHeight,
+                 SWP_NOACTIVATE | SWP_NOZORDER);
+}
+
 void StatusBarWindow::Show()
 {
     if (!m_window)
         return;
+    Layout();
     ShowWindow(m_window, SW_SHOWNOACTIVATE);
     SetWindowPos(m_window, HWND_TOPMOST, 0, 0, 0, 0,
                  SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_SHOWWINDOW);
@@ -319,12 +413,17 @@ void StatusBarWindow::Hide()
         ShowWindow(m_window, SW_HIDE);
 }
 
-void StatusBarWindow::SetMode(bool chineseMode, const std::wstring& inputMethodName)
+void StatusBarWindow::SetState(bool chineseMode, bool simplified, bool fullWidth,
+                               const std::wstring& inputMethodName)
 {
     m_chineseMode = chineseMode;
+    m_simplified = simplified;
+    m_fullWidth = fullWidth;
     if (!inputMethodName.empty())
         m_inputMethodName = inputMethodName;
+
     if (m_window) {
+        Layout();
         InvalidateRect(m_window, nullptr, TRUE);
         UpdateWindow(m_window);
     }
@@ -365,22 +464,27 @@ LRESULT StatusBarWindow::HandleMessage(HWND hwnd, UINT message, WPARAM wParam, L
 
     case WM_LBUTTONUP: {
         POINT point = { GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) };
-        if (point.x > 130 && m_onClick)
-            m_onClick();
+        for (int item = ItemAlphanumeric; item < ItemCount; ++item) {
+            if (PtInRect(&m_itemRects[item], point)) {
+                if (m_onClick)
+                    m_onClick(item);
+                return 0;
+            }
+        }
         return 0;
     }
 
     case WM_NCHITTEST: {
-        // Left part drags the bar, right part is the 中/英 hot area.
         POINT cursor = { GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) };
         ScreenToClient(hwnd, &cursor);
-        if (cursor.x > 130 && cursor.x < 175 && cursor.y > 2 && cursor.y < 22)
-            return HTCLIENT;
-        return HTCAPTION;
+        for (int item = ItemAlphanumeric; item < ItemCount; ++item) {
+            if (PtInRect(&m_itemRects[item], cursor))
+                return HTCLIENT;
+        }
+        return HTCAPTION;   // the rest of the bar drags the window
     }
 
     case WM_MOVE:
-        SavePosition();
         return 0;
 
     default:
@@ -389,54 +493,77 @@ LRESULT StatusBarWindow::HandleMessage(HWND hwnd, UINT message, WPARAM wParam, L
     return DefWindowProcW(hwnd, message, wParam, lParam);
 }
 
-void StatusBarWindow::SavePosition()
-{
-    if (!m_window)
-        return;
-
-    RECT rect;
-    GetWindowRect(m_window, &rect);
-
-    HKEY key = nullptr;
-    if (RegCreateKeyExW(HKEY_CURRENT_USER, L"Software\\KeyKeyTSF", 0, nullptr, 0,
-                        KEY_SET_VALUE, nullptr, &key, nullptr) == ERROR_SUCCESS) {
-        DWORD value = ((DWORD)(WORD)rect.left << 16) | (WORD)rect.top;
-        RegSetValueExW(key, L"StatusBarPosition", 0, REG_DWORD,
-                       (const BYTE*)&value, sizeof(value));
-        RegCloseKey(key);
-    }
-}
-
 void StatusBarWindow::PaintInto(HDC dc, const RECT& client)
 {
-    HBRUSH background = CreateSolidBrush(m_chineseMode ? kStatusBackground : kStatusBackgroundEnglish);
-    FillRect(dc, &client, background);
-    DeleteObject(background);
+    const int width = client.right - client.left;
+    const int height = client.bottom - client.top;
 
-    SetBkMode(dc, TRANSPARENT);
-    SetTextColor(dc, kStatusText);
+    if (!m_memoryDc) {
+        m_memoryDc = CreateCompatibleDC(dc);
+        m_canvas = CreateCompatibleBitmap(dc, width, height);
+        SelectObject(m_memoryDc, m_canvas);
+    }
 
-    HFONT font = CreateUiFont(13, false);
-    HFONT bold = CreateUiFont(14, true);
-    HFONT oldFont = (HFONT)SelectObject(dc, bold);
+    HDC mem = m_memoryDc;
 
-    RECT logo = { 4, 0, 30, client.bottom };
-    DrawTextCentered(dc, L"Y!", logo);
+    // background: KeyKey tiles barbg.bmp horizontally
+    if (m_background) {
+        HDC source = CreateCompatibleDC(dc);
+        HGDIOBJ old = SelectObject(source, m_background);
+        StretchBlt(mem, 0, 0, width, height, source, 0, 0, 25, 27, SRCCOPY);
+        SelectObject(source, old);
+        DeleteDC(source);
+    }
 
-    SelectObject(dc, font);
-    RECT name = { 32, 0, 130, client.bottom };
-    DrawTextW(dc, m_inputMethodName.c_str(), (int)m_inputMethodName.size(), &name,
-              DT_SINGLELINE | DT_LEFT | DT_VCENTER | DT_NOPREFIX | DT_END_ELLIPSIS);
+    auto blit = [&](HBITMAP bitmap, int x, int y, int w, int h) {
+        if (!bitmap)
+            return;
+        HDC source = CreateCompatibleDC(dc);
+        HGDIOBJ old = SelectObject(source, bitmap);
+        BitBlt(mem, x, y, w, h, source, 0, 0, SRCCOPY);
+        SelectObject(source, old);
+        DeleteDC(source);
+    };
 
-    SelectObject(dc, bold);
-    RECT mode = { 134, 2, 172, client.bottom - 2 };
-    HBRUSH modeBox = CreateSolidBrush(RGB(255, 255, 255));
-    FillRect(dc, &mode, modeBox);
-    DeleteObject(modeBox);
-    SetTextColor(dc, m_chineseMode ? kStatusBackground : kStatusBackgroundEnglish);
-    DrawTextCentered(dc, m_chineseMode ? L"中" : L"英", mode);
+    blit(m_head, 0, 0, kHeadWidth, kBarHeight);
 
-    SelectObject(dc, oldFont);
+    // input method icon and its name
+    blit(m_iconInputMethod, m_itemRects[ItemInputMethod].left, (kBarHeight - kIconSize) / 2,
+         kIconSize, kIconSize);
+    SetBkMode(mem, TRANSPARENT);
+    SetTextColor(mem, RGB(255, 255, 255));
+    HFONT font = CreateFontW(-12, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
+                             DEFAULT_CHARSET, OUT_TT_PRECIS, CLIP_DEFAULT_PRECIS,
+                             CLEARTYPE_QUALITY, DEFAULT_PITCH, L"Tahoma");
+    HFONT oldFont = (HFONT)SelectObject(mem, font);
+    RECT textRect = { m_itemRects[ItemInputMethod].left + kIconSize + kTextGap, 0,
+                      m_itemRects[ItemInputMethod].right, kBarHeight };
+    DrawTextW(mem, m_inputMethodName.c_str(), (int)m_inputMethodName.size(), &textRect,
+              DT_SINGLELINE | DT_LEFT | DT_VCENTER | DT_NOPREFIX);
+    SelectObject(mem, oldFont);
     DeleteObject(font);
-    DeleteObject(bold);
+
+    blit(m_chineseMode ? m_iconChinese : m_iconEnglish,
+         m_itemRects[ItemAlphanumeric].left, m_itemRects[ItemAlphanumeric].top, kIconSize, kIconSize);
+    blit(m_simplified ? m_iconZhCn : m_iconZhTw,
+         m_itemRects[ItemConverter].left, m_itemRects[ItemConverter].top, kIconSize, kIconSize);
+    blit(m_fullWidth ? m_iconFullWidth : m_iconHalfWidth,
+         m_itemRects[ItemWidth].left, m_itemRects[ItemWidth].top, kIconSize, kIconSize);
+    blit(m_symbolOpen ? m_iconSymbolClose : m_iconSymbolOpen,
+         m_itemRects[ItemSymbol].left, m_itemRects[ItemSymbol].top, kIconSize, kIconSize);
+    blit(m_iconConfig,
+         m_itemRects[ItemConfig].left, m_itemRects[ItemConfig].top, kIconSize, kIconSize);
+
+    blit(m_tail, width - kTailWidth, 0, kTailWidth, kBarHeight);
+
+    // 1px frame, like the original
+    HPEN pen = CreatePen(PS_SOLID, 1, RGB(0, 0, 0));
+    HGDIOBJ oldPen = SelectObject(mem, pen);
+    HGDIOBJ oldBrush = SelectObject(mem, GetStockObject(NULL_BRUSH));
+    Rectangle(mem, 0, 0, width, height);
+    SelectObject(mem, oldBrush);
+    SelectObject(mem, oldPen);
+    DeleteObject(pen);
+
+    BitBlt(dc, 0, 0, width, height, mem, 0, 0, SRCCOPY);
 }

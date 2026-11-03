@@ -1,5 +1,20 @@
-// KeyKeyTSF.rc - embeds the CangJie table so the DLL is self-contained
+// KeyKeyTSF.rc - embeds the CangJie table and KeyKey's status bar graphics
 
 #include "resource.h"
 
 IDR_CANGJIE_CIN RCDATA "../../DataTables/cj-ext.cin"
+
+IDB_BAR_BG            BITMAP "../Windows-IMM/BaseIMEUI/resources/barbg.bmp"
+IDB_BAR_HEAD          BITMAP "../Windows-IMM/BaseIMEUI/resources/barhead.bmp"
+IDB_BAR_TAIL          BITMAP "../Windows-IMM/BaseIMEUI/resources/bartail.bmp"
+
+IDB_ICON_CANGJIE      BITMAP "../Windows-IMM/BaseIMEUI/StatusbarItems/cangjie.bmp"
+IDB_ICON_CHINESE      BITMAP "../Windows-IMM/BaseIMEUI/StatusbarItems/chinese.bmp"
+IDB_ICON_ENGLISH      BITMAP "../Windows-IMM/BaseIMEUI/StatusbarItems/english.bmp"
+IDB_ICON_ZH_TW        BITMAP "../Windows-IMM/BaseIMEUI/StatusbarItems/zh_TW.bmp"
+IDB_ICON_ZH_CN        BITMAP "../Windows-IMM/BaseIMEUI/StatusbarItems/zh_CN.bmp"
+IDB_ICON_HALFWIDTH    BITMAP "../Windows-IMM/BaseIMEUI/StatusbarItems/halfwidth.bmp"
+IDB_ICON_FULLWIDTH    BITMAP "../Windows-IMM/BaseIMEUI/StatusbarItems/fullwidth.bmp"
+IDB_ICON_SYMBOL_OPEN  BITMAP "../Windows-IMM/BaseIMEUI/StatusbarItems/symbolOpen.bmp"
+IDB_ICON_SYMBOL_CLOSE BITMAP "../Windows-IMM/BaseIMEUI/StatusbarItems/symbolClose.bmp"
+IDB_ICON_CONFIG       BITMAP "../Windows-IMM/BaseIMEUI/StatusbarItems/config.bmp"

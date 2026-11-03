@@ -71,6 +71,8 @@ CangjieService::CangjieService()
     , _dwKeySinkCookie(TF_INVALID_COOKIE)
     , _windowsReady(false)
     , _shiftPressedAlone(false)
+    , _simplified(false)
+    , _fullWidth(false)
     , _caretX(0)
     , _caretY(0)
     , _caretValid(false)
@@ -102,8 +104,8 @@ void CangjieService::_InitWindows()
         return;
     }
 
-    _statusBar.SetClickHandler([this]() { _ToggleMode(); });
-    _statusBar.SetMode(_engine.IsChineseMode(), L"CangJie");
+    _statusBar.SetClickHandler([this](int item) { _OnStatusBarItem(item); });
+    _statusBar.SetState(_engine.IsChineseMode(), _simplified, _fullWidth, L"CangJie");
 
     _windowsReady = true;
     KeyKeyLog(L"engine: ready (CangJie table loaded)");
@@ -112,9 +114,37 @@ void CangjieService::_InitWindows()
 void CangjieService::_ToggleMode()
 {
     _engine.ToggleMode();
-    _statusBar.SetMode(_engine.IsChineseMode(), L"CangJie");
+    _statusBar.SetState(_engine.IsChineseMode(), _simplified, _fullWidth, L"CangJie");
     _candidateWindow.Hide();
     KeyKeyLog(L"mode: %s", _engine.IsChineseMode() ? L"Chinese" : L"English");
+}
+
+void CangjieService::_ToggleSimplified()
+{
+    // The bar's 繁/簡 button. The converter module that KeyKey used is not part
+    // of the standalone engine yet, so this only flips what the bar shows.
+    _simplified = !_simplified;
+    _statusBar.SetState(_engine.IsChineseMode(), _simplified, _fullWidth, L"CangJie");
+    KeyKeyLog(L"converter: %s (display only for now)", _simplified ? L"simplified" : L"traditional");
+}
+
+void CangjieService::_ToggleWidth()
+{
+    _fullWidth = !_fullWidth;
+    _statusBar.SetState(_engine.IsChineseMode(), _simplified, _fullWidth, L"CangJie");
+    KeyKeyLog(L"width: %s", _fullWidth ? L"full" : L"half");
+}
+
+void CangjieService::_OnStatusBarItem(int item)
+{
+    switch (item) {
+    case StatusBarWindow::ItemAlphanumeric: _ToggleMode(); break;
+    case StatusBarWindow::ItemConverter:    _ToggleSimplified(); break;
+    case StatusBarWindow::ItemWidth:        _ToggleWidth(); break;
+    case StatusBarWindow::ItemSymbol:       KeyKeyLog(L"symbol table: not implemented yet"); break;
+    case StatusBarWindow::ItemConfig:       KeyKeyLog(L"config menu: not implemented yet"); break;
+    default: break;
+    }
 }
 
 STDMETHODIMP CangjieService::QueryInterface(REFIID riid, void** ppvObj)
@@ -184,7 +214,7 @@ STDMETHODIMP CangjieService::ActivateEx(ITfThreadMgr* ptim, TfClientId tid, DWOR
     _InitFocusContext();
 
     if (_windowsReady) {
-        _statusBar.SetMode(_engine.IsChineseMode(), L"CangJie");
+        _statusBar.SetState(_engine.IsChineseMode(), _simplified, _fullWidth, L"CangJie");
         _statusBar.Show();
     }
     return S_OK;

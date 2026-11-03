@@ -62,6 +62,9 @@ private:
     HRESULT _RequestEditSession(const std::function<void(TfEditCookie)>& body);
     void _UpdateUi(const EngineResult& result);
     void _ToggleMode();
+    void _ToggleSimplified();
+    void _ToggleWidth();
+    void _OnStatusBarItem(int item);
 
     LONG _cRef;
     ITfThreadMgr* _pThreadMgr;
@@ -77,6 +80,8 @@ private:
     StatusBarWindow _statusBar;
     bool _windowsReady;
     bool _shiftPressedAlone;
+    bool _simplified;
+    bool _fullWidth;
     int _caretX;
     int _caretY;
     bool _caretValid;
