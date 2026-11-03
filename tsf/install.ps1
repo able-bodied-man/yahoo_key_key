@@ -1,5 +1,7 @@
-param(
-    [switch]$Elevated
+﻿param(
+    [switch]$Elevated,
+    [string]$InstallDir = 'C:\Program Files\KeyKeyTSF',
+    [string]$KeyKeyMsi = ''
 )
 
 $ErrorActionPreference = 'Stop'
@@ -18,7 +20,10 @@ if (-not (Test-Administrator)) {
 
     Write-Host 'Administrator rights are required. Launching an elevated PowerShell...' -ForegroundColor Yellow
     try {
-        $arguments = "-NoProfile -ExecutionPolicy Bypass -File `"$scriptPath`" -Elevated"
+        $arguments = "-NoProfile -ExecutionPolicy Bypass -File `"$scriptPath`" -Elevated -InstallDir `"$InstallDir`""
+        if ($KeyKeyMsi) {
+            $arguments += " -KeyKeyMsi `"$KeyKeyMsi`""
+        }
         Start-Process -FilePath (Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe') `
             -Verb RunAs `
             -ArgumentList $arguments | Out-Null
@@ -30,10 +35,16 @@ if (-not (Test-Administrator)) {
     exit
 }
 
-Start-Transcript -Path 'C:\Users\Able\AppData\Local\Temp\opencode\keykeytsf-install.log' -Append
+$logPath = Join-Path $env:TEMP 'keykeytsf-install.log'
+$errorPath = Join-Path $env:TEMP 'keykeytsf-install-error.txt'
+try {
+    Start-Transcript -Path $logPath -Append | Out-Null
+} catch {
+    # A transcript is a convenience, not a requirement.
+}
 trap {
     $message = $_ | Out-String
-    $message | Out-File 'C:\Users\Able\AppData\Local\Temp\opencode\keykeytsf-install-error.txt' -Encoding utf8 -Append
+    $message | Out-File $errorPath -Encoding utf8 -Append
     Write-Host ''
     Write-Host 'Installation failed:' -ForegroundColor Red
     Write-Host $message -ForegroundColor Red
@@ -44,9 +55,8 @@ trap {
     exit 1
 }
 
-$installDir = 'C:\Program Files\KeyKeyTSF'
 $stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
-$targetDll = Join-Path $installDir "KeyKeyTSF-$stamp.dll"
+$targetDll = Join-Path $InstallDir "KeyKeyTSF-$stamp.dll"
 $subject = 'CN=KeyKey TSF Local Test'
 
 $sourceDll = Join-Path $PSScriptRoot 'KeyKeyTSF.dll'
@@ -58,8 +68,40 @@ if (-not (Test-Path $sourceDll)) {
     throw "Build the DLL first: $sourceDll not found"
 }
 
+# Ensure the legacy KeyKey engine is present. The standalone ZIP expects the
+# user to install KeyKey first; the EXE installer passes -KeyKeyMsi so it can
+# install the bundled original MSI silently.
+$keyKeyLocation = $null
+try {
+    $keyKeyKey = Get-ItemProperty -Path 'HKLM:\SOFTWARE\Yahoo\KeyKey' -ErrorAction Stop
+    $keyKeyLocation = $keyKeyKey.ServerLocation
+} catch {
+    $keyKeyLocation = $null
+}
+
+$keyKeyInstalled = $false
+if ($keyKeyLocation) {
+    $keyKeyServer = Join-Path $keyKeyLocation 'KeyKeyServer.exe'
+    $keyKeyInstalled = Test-Path $keyKeyServer
+}
+
+if (-not $keyKeyInstalled) {
+    if ($KeyKeyMsi -and (Test-Path $KeyKeyMsi)) {
+        Write-Host 'Yahoo! KeyKey engine is not installed. Installing the bundled MSI...'
+        $msiProcess = Start-Process -FilePath 'msiexec.exe' `
+            -ArgumentList @('/i', "`"$KeyKeyMsi`"", '/qn', '/norestart', 'ALLUSERS=1') `
+            -Wait -PassThru
+        if ($msiProcess.ExitCode -ne 0 -and $msiProcess.ExitCode -ne 3010) {
+            throw "Yahoo! KeyKey MSI installation failed with exit code $($msiProcess.ExitCode)."
+        }
+    }
+    else {
+        throw 'Yahoo! KeyKey is not installed. Install Yahoo! KeyKey 1.1.2535 first, or use the bundled EXE installer.'
+    }
+}
+
 Write-Host "Installing from: $sourceDll"
-New-Item -ItemType Directory -Force -Path $installDir | Out-Null
+New-Item -ItemType Directory -Force -Path $InstallDir | Out-Null
 
 # Create or reuse a local code-signing certificate.
 Write-Host 'Preparing the local code-signing certificate...'
@@ -137,3 +179,4 @@ Write-Host ''
 Write-Host 'Installation complete.' -ForegroundColor Green
 Write-Host 'Restart WhatsApp or any already-running app, then select "Yahoo! KeyKey (TSF)" with Win+Space.'
 Stop-Transcript
+

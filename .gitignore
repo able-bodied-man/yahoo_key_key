@@ -1,0 +1,12 @@
+# Original Yahoo! KeyKey installer and the proprietary payload extracted from it
+orig/
+tsf/installer/keykey64.msi
+
+# Build output
+tsf/KeyKeyTSF/build/
+
+# Release artifacts (published as GitHub release assets)
+tsf/release/*.exe
+tsf/release/*.zip
+tsf/release/*.dll
+tsf/release/SHA256SUMS.txt

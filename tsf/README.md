@@ -57,6 +57,20 @@ The script runs `midl` for the legacy RPC IDL and then compiles
 
 ## Install
 
+### EXE installer (recommended)
+
+Run `KeyKeyTSF-1.0.3-x64-Setup.exe` and follow the wizard. The installer:
+
+1. checks whether Yahoo! KeyKey 1.1.2535 is already installed,
+2. installs the bundled original MSI silently if it is missing,
+3. installs the bridge to `C:\Program Files\Yahoo! KeyKey TSF`,
+4. signs and registers the DLL and adds the input profile.
+
+The wizard uses English text, so it does not show the garbled legacy
+`setup64.exe` dialogs.
+
+### ZIP / script installer
+
 Run from a normal PowerShell window:
 
 ```powershell
@@ -69,7 +83,7 @@ installer:
 1. creates/reuses a local code-signing certificate
    (`CN=KeyKey TSF Local Test`),
 2. trusts it in `LocalMachine\Root` and `LocalMachine\TrustedPublisher`,
-3. signs the DLL with `signtool`,
+3. signs the DLL with PowerShell Authenticode,
 4. copies it to `C:\Program Files\KeyKeyTSF\KeyKeyTSF-<timestamp>.dll`,
 5. registers the COM class and TSF language profile.
 
@@ -154,11 +168,16 @@ of the KeyKey look and behavior.
 
 ## Uninstall
 
+With the EXE installer, remove **Yahoo! KeyKey TSF** from
+**Settings > Apps > Installed apps**.
+
+With the ZIP installer:
+
 ```powershell
 .\uninstall.ps1
 ```
 
-This unregisters the TSF profile and COM class, removes the test certificate,
-and removes the profile from the user language list. DLLs that are still loaded
-by running processes may remain in `C:\Program Files\KeyKeyTSF`; restart those
-processes and delete the folder.
+Both paths unregister the TSF profile and COM class, remove the test
+certificate, and remove the profile from the user language list. DLLs that are
+still loaded by running processes are scheduled for deletion on the next
+Windows restart.

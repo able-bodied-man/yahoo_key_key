@@ -1,7 +1,21 @@
-﻿# KeyKey TSF 1.0.2
+﻿# KeyKey TSF 1.0.3
 
 A TSF text-service bridge that makes the legacy Yahoo! KeyKey input method work
 in modern Windows text clients, including WhatsApp from the Microsoft Store.
+
+## New in 1.0.3
+
+- A single `KeyKeyTSF-1.0.3-x64-Setup.exe` installer replaces the manual ZIP
+  workflow.
+- The installer bundles the original Yahoo! KeyKey 1.1.2535 MSI and installs it
+  silently when KeyKey is not already present.
+- The wizard is built with Inno Setup and uses English text, so the garbled
+  legacy `setup64.exe` dialogs no longer appear.
+- The TSF bridge installs to `C:\Program Files\Yahoo! KeyKey TSF`.
+- Uninstall now removes the TSF DLLs, the TSF/COM registration, the local
+  certificate, and the input profile. Files that are still loaded by a running
+  app are scheduled for deletion on the next restart.
+- The uninstaller no longer reports failure after a successful cleanup.
 
 ## Installer fixes in 1.0.1
 
@@ -17,12 +31,14 @@ in modern Windows text clients, including WhatsApp from the Microsoft Store.
 
 ## What is included
 
-- `KeyKeyTSF.dll` (x64) 鈥?TSF text service
-- `install.ps1` 鈥?local code signing, installation, COM/TSF registration, and
+- `KeyKeyTSF-1.0.3-x64-Setup.exe` - one-step installer (recommended)
+- `KeyKeyTSF-1.0.3-x64.zip` - manual installation for advanced users
+- `KeyKeyTSF.dll` (x64) - TSF text service
+- `install.ps1` - local code signing, installation, COM/TSF registration, and
   input-profile setup
-- `uninstall.ps1` 鈥?removes the TSF profile, COM registration, certificate, and
+- `uninstall.ps1` - removes the TSF profile, COM registration, certificate, and
   input-language entry
-- `INSTALL.txt` 鈥?quick installation and troubleshooting instructions
+- `INSTALL.txt` - quick installation and troubleshooting instructions
 
 ## Why a bridge
 
@@ -34,13 +50,15 @@ input-client layer with a TSF text service.
 ## Requirements
 
 - Windows 10/11 x64
-- Yahoo! KeyKey 1.1.2535 installed at the standard location
 - Administrator access for installation
+- If KeyKey is not installed, the EXE installer supplies Yahoo! KeyKey 1.1.2535
 
 ## Verification
 
-- Notepad/RichEdit: Cangjie `onf` + `Space` committed `浣燻 (U+4F60).
+- Notepad/RichEdit: Cangjie `onf` + `Space` committed `你` (U+4F60).
 - WhatsApp Store x64: the TSF service loaded in `WhatsApp.Root.exe`.
+- Silent install and silent uninstall both exit with code 0 and leave no TSF
+  files or registry keys behind.
 
 ## Notes
 
@@ -53,5 +71,3 @@ input-client layer with a TSF text service.
 ## SHA-256
 
 See `SHA256SUMS.txt` in the release assets.
-
-

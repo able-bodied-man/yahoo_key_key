@@ -1,10 +1,20 @@
+﻿param(
+    [string]$InstallDir = 'C:\Program Files\KeyKeyTSF'
+)
+
 $ErrorActionPreference = 'Continue'
-Start-Transcript -Path 'C:\Users\Able\AppData\Local\Temp\opencode\keykeytsf-uninstall.log' -Append
+
+$logPath = Join-Path $env:TEMP 'keykeytsf-uninstall.log'
+try {
+    Start-Transcript -Path $logPath -Append | Out-Null
+} catch {
+    # A transcript is a convenience, not a requirement.
+}
 
 $clsid = '{F7802624-5E24-4F6A-9BFB-5B525966B27A}'
 $profile = '{21A09CEE-663F-4481-877D-DE1373C678FA}'
 $tip = "0404:$clsid$profile"
-$installDir = 'C:\Program Files\KeyKeyTSF'
+
 
 if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
     throw 'Run this script as Administrator.'
@@ -52,17 +62,23 @@ try {
     $list = Get-WinUserLanguageList
     $changed = $false
     foreach ($language in $list) {
-        $before = @($language.InputMethodTips).Count
-        $language.InputMethodTips = @($language.InputMethodTips | Where-Object { $_ -ne $tip })
-        if (@($language.InputMethodTips).Count -ne $before) {
+        $tips = $language.InputMethodTips
+        $removed = 0
+        foreach ($existingTip in @($tips)) {
+            if ($existingTip -eq $tip) {
+                [void]$tips.Remove($existingTip)
+                $removed++
+            }
+        }
+        if ($removed -gt 0) {
             $changed = $true
         }
     }
 
     # Remove a language entry that was added only for this tip.
-    $emptyAddedLanguage = $list | Where-Object { $_.LanguageTag -eq 'zh-Hant-TW' -and @($_.InputMethodTips).Count -eq 0 }
+    $emptyAddedLanguage = $list | Where-Object { $_.LanguageTag -eq 'zh-Hant-TW' -and @($_.InputMethodTips).Count -eq 0 } | Select-Object -First 1
     if ($emptyAddedLanguage) {
-        $list = @($list | Where-Object { $_.LanguageTag -ne 'zh-Hant-TW' })
+        [void]$list.Remove($emptyAddedLanguage)
         $changed = $true
     }
 
@@ -76,8 +92,55 @@ try {
 Remove-Item -Force $installedPathFile -ErrorAction SilentlyContinue
 Remove-Item -Force $thumbprintFile -ErrorAction SilentlyContinue
 
-# Best effort. Loaded copies in running processes keep the files locked.
-Remove-Item -Recurse -Force $installDir -ErrorAction SilentlyContinue
+# Best effort. Loaded copies in running processes (Explorer, WhatsApp, Notepad)
+# keep the DLL locked, so fall back to a reboot-time delete.
+function Register-DeleteOnReboot {
+    param([string]$Path)
+
+    if (-not ('KeyKeyTSF.NativeMethods' -as [type])) {
+        Add-Type -Namespace KeyKeyTSF -Name NativeMethods -MemberDefinition @'
+[System.Runtime.InteropServices.DllImport("kernel32.dll", SetLastError = true, CharSet = System.Runtime.InteropServices.CharSet.Unicode)]
+public static extern bool MoveFileEx(string lpExistingFileName, string lpNewFileName, int dwFlags);
+'@
+    }
+
+    # MOVEFILE_DELAY_UNTIL_REBOOT
+    return [KeyKeyTSF.NativeMethods]::MoveFileEx($Path, $null, 0x4)
+}
+
+$scheduledForReboot = @()
+if (Test-Path $InstallDir) {
+    Remove-Item -Recurse -Force $InstallDir -ErrorAction SilentlyContinue
+}
+
+if (Test-Path $InstallDir) {
+    # Schedule files first, then directories from the deepest level upwards.
+    $leftovers = @(Get-ChildItem -Path $InstallDir -Recurse -File -Force -ErrorAction SilentlyContinue)
+    foreach ($file in $leftovers) {
+        if (Register-DeleteOnReboot $file.FullName) {
+            $scheduledForReboot += $file.FullName
+        }
+    }
+
+    $directories = @(Get-ChildItem -Path $InstallDir -Recurse -Directory -Force -ErrorAction SilentlyContinue |
+        Sort-Object { $_.FullName.Length } -Descending)
+    $directories += Get-Item $InstallDir -ErrorAction SilentlyContinue
+    foreach ($directory in $directories) {
+        if ($directory) {
+            Register-DeleteOnReboot $directory.FullName | Out-Null
+        }
+    }
+}
 
 Write-Host 'KeyKey TSF unregistered. Restart Explorer/WhatsApp/Notepad to release any loaded DLL copies.'
-Stop-Transcript
+if ($scheduledForReboot.Count -gt 0) {
+    Write-Host 'Some files are in use and will be removed the next time Windows restarts.' -ForegroundColor Yellow
+}
+
+try {
+    Stop-Transcript | Out-Null
+} catch {
+}
+
+exit 0
+
