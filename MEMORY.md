@@ -1,7 +1,7 @@
 # Project memory - Yahoo! KeyKey 2 bridge
 
 > Handoff notes for AI agents and contributors. Last updated: 2026-11-03,
-> current version **1.1.0** (renamed product, not yet released).
+> current release **v1.1.0**.
 >
 > Read this first, then `README.md` and `keykey2/README.md`.
 
@@ -246,8 +246,9 @@ git push origin "v$v"
 
 Pushing the tag triggers `.github/workflows/release.yml`, which builds the DLL
 and Setup EXE on `windows-latest`, creates the ZIP and hashes, and publishes the
-GitHub release. The workflow extracts `keykey64.msi` from the v1.0.4 Setup
-asset, so `orig/` is not needed in CI.
+GitHub release. CI has no access to `orig/`, so the workflow downloads the
+v1.0.4 Setup asset, runs it silently, and copies `keykey64.msi` out of its
+temporary folder while the bundled engine install is running.
 
 Manual fallback with a local toolchain:
 
@@ -338,6 +339,12 @@ Logs:
 
 - The original `setup64.exe` UI is garbled. Do not ship or invoke it; its inner
   `keykey64.msi` works fine.
+- The v1.0.4 Setup EXE is an Inno Setup package, so it does **not** contain an
+  appended CAB (`MSCF`). To get `keykey64.msi` from it, run it and copy the file
+  from `%TEMP%\is-*.tmp\` while the bundled engine install is in progress. The
+  release workflow does this automatically; do not reintroduce a CAB scan.
+- The workflow depends on the v1.0.4 release asset staying available. If it is
+  ever deleted, point the workflow at another release that ships a Setup EXE.
 - On a machine where KeyKey is already admin-assigned, `msiexec /i` can return
   `1625`. The EXE installer skips the MSI when `KeyKeyServer.exe` exists.
 - `install.ps1`'s error trap waits for Enter when hosted in a console; under
@@ -355,13 +362,13 @@ Logs:
 
 ## 10. Current status (2026-11-03)
 
-- Current version: **1.1.0** (product rename and new install folder; not yet
-  built or released).
-- Latest published release: **v1.0.4**.
-- Tags: `v1.0.0`, `v1.0.1`, `v1.0.2`, `v1.0.3`, `v1.0.4`, and the historical
-  preview tag.
+- Latest release: **v1.1.0** (product rename and new install folder).
+- Tags: `v1.0.0`, `v1.0.1`, `v1.0.2`, `v1.0.3`, `v1.0.4`, `v1.1.0`, and the
+  historical preview tag.
+- Releases are built and published by `.github/workflows/release.yml` from the
+  `v*` tag; no local toolchain is needed.
 - `master` includes the EXE installer, fixed uninstall, the fresh-profile fix,
-  and the KeyKey 2 rename.
+  the KeyKey 2 rename, and the tag-driven release workflow.
 - 1.0.3 is known broken for fresh installs (profile not added). Use 1.0.4+.
 - 1.1.0 installs to `C:\Program Files\Yahoo!\KeyKey2` and upgrades over 1.0.x
   automatically (same Inno AppId, `UsePreviousAppDir=no`).
