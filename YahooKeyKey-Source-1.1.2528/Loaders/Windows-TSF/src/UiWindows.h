@@ -102,6 +102,8 @@ private:
     HBITMAP m_iconConfig = nullptr;
 
     RECT m_itemRects[ItemCount] = {};
+    double m_scale = 1.0;
+    int m_barHeight = 24;
 };
 
 #endif // KEYKEY_UI_WINDOWS_H

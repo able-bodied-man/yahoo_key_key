@@ -265,21 +265,30 @@ void CandidateWindow::PaintInto(HDC dc, const RECT& client)
 
 // ------------------------------------------------------------------ status bar
 //
-// Geometry mirrors KeyKey's own bar: 23 px high, the 32x23 head graphic, the
-// input method icon plus its name, then five 20x20 tool icons, then the 13x23
-// tail, all over barbg.bmp tiled across the width.
+// Mirrors KeyKey's own bar: barbg.bmp tiled as the background, the 32x23 Y!
+// head, the input method icon with its name and drop-down arrow, then 中/EN,
+// 繁/簡, half/full width, the symbol table and the config hammer as 20x20
+// icons, then the 13x23 tail. Everything scales with the display DPI, the way
+// the WinForms original did at 125%/150%.
 
 namespace {
 
-const int kBarHeight = 23;
-const int kHeadWidth = 32;
-const int kTailWidth = 13;
-const int kIconSize = 20;
-const int kItemGap = 2;
-const int kTextGap = 3;
-const int kLeftPadding = 2;
+const int kBaseHeight = 26;
+const int kBaseHeadWidth = 32;
+const int kBaseTailWidth = 13;
+const int kBaseIconSize = 20;
+const int kBaseItemGap = 8;
+const int kBaseTextGap = 3;
+const int kBaseArrowWidth = 9;
+const int kBaseLeftPadding = 3;
+const int kBaseFontHeight = 13;
 
-int TextWidth(HDC dc, HFONT font, const std::wstring& text)
+int Scale(int value, double factor)
+{
+    return (int)(value * factor + 0.5);
+}
+
+int MeasureText(HDC dc, HFONT font, const std::wstring& text)
 {
     if (text.empty())
         return 0;
@@ -288,6 +297,17 @@ int TextWidth(HDC dc, HFONT font, const std::wstring& text)
     GetTextExtentPoint32W(dc, text.c_str(), (int)text.size(), &size);
     SelectObject(dc, old);
     return size.cx;
+}
+
+double DpiFactor(HWND hwnd)
+{
+    HDC dc = GetDC(hwnd);
+    int dpi = dc ? GetDeviceCaps(dc, LOGPIXELSY) : 96;
+    if (dc)
+        ReleaseDC(hwnd, dc);
+    if (dpi <= 0)
+        dpi = 96;
+    return dpi / 96.0;
 }
 
 } // namespace
@@ -323,7 +343,7 @@ bool StatusBarWindow::Create(HINSTANCE instance)
 
     m_window = CreateWindowExW(WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE | WS_EX_TOPMOST,
                                kStatusBarClass, L"", WS_POPUP,
-                               0, 0, 10, kBarHeight, nullptr, nullptr, instance, this);
+                               0, 0, 10, kBaseHeight, nullptr, nullptr, instance, this);
     if (!m_window)
         return false;
 
@@ -354,45 +374,54 @@ void StatusBarWindow::Layout()
     if (!m_window)
         return;
 
+    const double factor = DpiFactor(m_window);
+    m_scale = factor;
+    m_barHeight = Scale(kBaseHeight, factor);
+
     HDC dc = GetDC(m_window);
-    HFONT font = CreateFontW(-12, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
-                             DEFAULT_CHARSET, OUT_TT_PRECIS, CLIP_DEFAULT_PRECIS,
+    HFONT font = CreateFontW(-Scale(kBaseFontHeight, factor), 0, 0, 0, FW_NORMAL, FALSE, FALSE,
+                             FALSE, DEFAULT_CHARSET, OUT_TT_PRECIS, CLIP_DEFAULT_PRECIS,
                              CLEARTYPE_QUALITY, DEFAULT_PITCH, L"Tahoma");
-    const int nameWidth = TextWidth(dc, font, m_inputMethodName);
+    const int nameWidth = MeasureText(dc, font, m_inputMethodName);
     DeleteObject(font);
     ReleaseDC(m_window, dc);
 
-    int x = kHeadWidth + kLeftPadding;
+    const int iconSize = Scale(kBaseIconSize, factor);
+    const int itemGap = Scale(kBaseItemGap, factor);
+    const int textGap = Scale(kBaseTextGap, factor);
+    const int arrow = Scale(kBaseArrowWidth, factor);
+
+    int x = Scale(kBaseHeadWidth, factor) + Scale(kBaseLeftPadding, factor);
+
     m_itemRects[ItemInputMethod].left = x;
     m_itemRects[ItemInputMethod].top = 0;
-    m_itemRects[ItemInputMethod].right = x + kIconSize + kTextGap + nameWidth + 4;
-    m_itemRects[ItemInputMethod].bottom = kBarHeight;
+    m_itemRects[ItemInputMethod].right = x + iconSize + textGap + nameWidth + arrow + itemGap;
+    m_itemRects[ItemInputMethod].bottom = m_barHeight;
     x = m_itemRects[ItemInputMethod].right;
 
     for (int item = ItemAlphanumeric; item < ItemCount; ++item) {
         m_itemRects[item].left = x;
-        m_itemRects[item].top = (kBarHeight - kIconSize) / 2;
-        m_itemRects[item].right = x + kIconSize;
-        m_itemRects[item].bottom = m_itemRects[item].top + kIconSize;
-        x += kIconSize + kItemGap;
+        m_itemRects[item].top = (m_barHeight - iconSize) / 2;
+        m_itemRects[item].right = x + iconSize;
+        m_itemRects[item].bottom = m_itemRects[item].top + iconSize;
+        x += iconSize + itemGap;
     }
 
-    const int width = x + kTailWidth;
+    const int width = x + Scale(kBaseTailWidth, factor);
 
     RECT current;
     GetWindowRect(m_window, &current);
     RECT workArea = { 0, 0, 0, 0 };
     SystemParametersInfoW(SPI_GETWORKAREA, 0, &workArea, 0);
 
-    // Keep the position the user dragged it to, otherwise bottom-right.
     int left = current.left;
     int top = current.top;
     if (left == 0 && top == 0) {
-        left = workArea.right - width - 20;
-        top = workArea.bottom - kBarHeight - 20;
+        left = workArea.right - width - Scale(20, factor);
+        top = workArea.bottom - m_barHeight - Scale(20, factor);
     }
 
-    SetWindowPos(m_window, HWND_TOPMOST, left, top, width, kBarHeight,
+    SetWindowPos(m_window, HWND_TOPMOST, left, top, width, m_barHeight,
                  SWP_NOACTIVATE | SWP_NOZORDER);
 }
 
@@ -481,7 +510,7 @@ LRESULT StatusBarWindow::HandleMessage(HWND hwnd, UINT message, WPARAM wParam, L
             if (PtInRect(&m_itemRects[item], cursor))
                 return HTCLIENT;
         }
-        return HTCAPTION;   // the rest of the bar drags the window
+        return HTCAPTION;
     }
 
     case WM_MOVE:
@@ -497,16 +526,20 @@ void StatusBarWindow::PaintInto(HDC dc, const RECT& client)
 {
     const int width = client.right - client.left;
     const int height = client.bottom - client.top;
+    if (width <= 0 || height <= 0)
+        return;
 
-    if (!m_memoryDc) {
-        m_memoryDc = CreateCompatibleDC(dc);
-        m_canvas = CreateCompatibleBitmap(dc, width, height);
-        SelectObject(m_memoryDc, m_canvas);
-    }
+    if (m_memoryDc) { DeleteDC(m_memoryDc); m_memoryDc = nullptr; }
+    if (m_canvas) { DeleteObject(m_canvas); m_canvas = nullptr; }
+    m_memoryDc = CreateCompatibleDC(dc);
+    m_canvas = CreateCompatibleBitmap(dc, width, height);
+    SelectObject(m_memoryDc, m_canvas);
 
     HDC mem = m_memoryDc;
+    const double factor = (m_scale > 0.0) ? m_scale : 1.0;
+    const int iconSize = Scale(kBaseIconSize, factor);
 
-    // background: KeyKey tiles barbg.bmp horizontally
+    // background
     if (m_background) {
         HDC source = CreateCompatibleDC(dc);
         HGDIOBJ old = SelectObject(source, m_background);
@@ -515,48 +548,73 @@ void StatusBarWindow::PaintInto(HDC dc, const RECT& client)
         DeleteDC(source);
     }
 
-    auto blit = [&](HBITMAP bitmap, int x, int y, int w, int h) {
+    auto blit = [&](HBITMAP bitmap, int x, int y, int w, int h, int sourceW, int sourceH) {
         if (!bitmap)
             return;
         HDC source = CreateCompatibleDC(dc);
         HGDIOBJ old = SelectObject(source, bitmap);
-        BitBlt(mem, x, y, w, h, source, 0, 0, SRCCOPY);
+        if (w == sourceW && h == sourceH)
+            BitBlt(mem, x, y, w, h, source, 0, 0, SRCCOPY);
+        else {
+            SetStretchBltMode(mem, COLORONCOLOR);
+            StretchBlt(mem, x, y, w, h, source, 0, 0, sourceW, sourceH, SRCCOPY);
+        }
         SelectObject(source, old);
         DeleteDC(source);
     };
 
-    blit(m_head, 0, 0, kHeadWidth, kBarHeight);
+    blit(m_head, 0, 0, Scale(kBaseHeadWidth, factor), height, 32, 23);
 
-    // input method icon and its name
-    blit(m_iconInputMethod, m_itemRects[ItemInputMethod].left, (kBarHeight - kIconSize) / 2,
-         kIconSize, kIconSize);
+    const int iconTop = (height - iconSize) / 2;
+    blit(m_iconInputMethod, m_itemRects[ItemInputMethod].left, iconTop, iconSize, iconSize, 20, 20);
+
     SetBkMode(mem, TRANSPARENT);
     SetTextColor(mem, RGB(255, 255, 255));
-    HFONT font = CreateFontW(-12, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
-                             DEFAULT_CHARSET, OUT_TT_PRECIS, CLIP_DEFAULT_PRECIS,
+    HFONT font = CreateFontW(-Scale(kBaseFontHeight, factor), 0, 0, 0, FW_NORMAL, FALSE, FALSE,
+                             FALSE, DEFAULT_CHARSET, OUT_TT_PRECIS, CLIP_DEFAULT_PRECIS,
                              CLEARTYPE_QUALITY, DEFAULT_PITCH, L"Tahoma");
     HFONT oldFont = (HFONT)SelectObject(mem, font);
-    RECT textRect = { m_itemRects[ItemInputMethod].left + kIconSize + kTextGap, 0,
-                      m_itemRects[ItemInputMethod].right, kBarHeight };
+    RECT textRect = { m_itemRects[ItemInputMethod].left + iconSize + Scale(kBaseTextGap, factor), 0,
+                      m_itemRects[ItemInputMethod].right, height };
     DrawTextW(mem, m_inputMethodName.c_str(), (int)m_inputMethodName.size(), &textRect,
               DT_SINGLELINE | DT_LEFT | DT_VCENTER | DT_NOPREFIX);
+
+    // the drop-down arrow of the input method button
+    {
+        const int arrowWidth = Scale(7, factor);
+        const int arrowHeight = Scale(4, factor);
+        int cx = textRect.right - Scale(kBaseArrowWidth, factor) / 2;
+        int cy = height / 2;
+        POINT points[3] = {
+            { cx - arrowWidth / 2, cy - arrowHeight / 2 },
+            { cx + arrowWidth / 2, cy - arrowHeight / 2 },
+            { cx, cy + arrowHeight / 2 }
+        };
+        HBRUSH brush = CreateSolidBrush(RGB(230, 230, 230));
+        HGDIOBJ oldBrush = SelectObject(mem, brush);
+        HGDIOBJ oldPen = SelectObject(mem, GetStockObject(NULL_PEN));
+        Polygon(mem, points, 3);
+        SelectObject(mem, oldPen);
+        SelectObject(mem, oldBrush);
+        DeleteObject(brush);
+    }
+
     SelectObject(mem, oldFont);
     DeleteObject(font);
 
     blit(m_chineseMode ? m_iconChinese : m_iconEnglish,
-         m_itemRects[ItemAlphanumeric].left, m_itemRects[ItemAlphanumeric].top, kIconSize, kIconSize);
+         m_itemRects[ItemAlphanumeric].left, m_itemRects[ItemAlphanumeric].top, iconSize, iconSize, 20, 20);
     blit(m_simplified ? m_iconZhCn : m_iconZhTw,
-         m_itemRects[ItemConverter].left, m_itemRects[ItemConverter].top, kIconSize, kIconSize);
+         m_itemRects[ItemConverter].left, m_itemRects[ItemConverter].top, iconSize, iconSize, 20, 20);
     blit(m_fullWidth ? m_iconFullWidth : m_iconHalfWidth,
-         m_itemRects[ItemWidth].left, m_itemRects[ItemWidth].top, kIconSize, kIconSize);
+         m_itemRects[ItemWidth].left, m_itemRects[ItemWidth].top, iconSize, iconSize, 20, 20);
     blit(m_symbolOpen ? m_iconSymbolClose : m_iconSymbolOpen,
-         m_itemRects[ItemSymbol].left, m_itemRects[ItemSymbol].top, kIconSize, kIconSize);
+         m_itemRects[ItemSymbol].left, m_itemRects[ItemSymbol].top, iconSize, iconSize, 20, 20);
     blit(m_iconConfig,
-         m_itemRects[ItemConfig].left, m_itemRects[ItemConfig].top, kIconSize, kIconSize);
+         m_itemRects[ItemConfig].left, m_itemRects[ItemConfig].top, iconSize, iconSize, 20, 20);
 
-    blit(m_tail, width - kTailWidth, 0, kTailWidth, kBarHeight);
+    blit(m_tail, width - Scale(kBaseTailWidth, factor), 0, Scale(kBaseTailWidth, factor), height, 13, 23);
 
-    // 1px frame, like the original
     HPEN pen = CreatePen(PS_SOLID, 1, RGB(0, 0, 0));
     HGDIOBJ oldPen = SelectObject(mem, pen);
     HGDIOBJ oldBrush = SelectObject(mem, GetStockObject(NULL_BRUSH));
