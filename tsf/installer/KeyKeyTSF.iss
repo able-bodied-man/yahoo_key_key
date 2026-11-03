@@ -1,8 +1,8 @@
-[Setup]
+﻿[Setup]
 AppId={{205BC078-BF4D-45D3-837E-CDA0395C066C}
 AppName=Yahoo! KeyKey TSF
-AppVersion=1.0.3
-AppVerName=Yahoo! KeyKey TSF 1.0.3
+AppVersion=1.0.4
+AppVerName=Yahoo! KeyKey TSF 1.0.4
 AppPublisher=KeyKey TSF Bridge
 AppPublisherURL=https://github.com/able-bodied-man/yahoo_key_key
 AppSupportURL=https://github.com/able-bodied-man/yahoo_key_key/issues
@@ -12,7 +12,7 @@ DefaultGroupName=Yahoo! KeyKey TSF
 DisableProgramGroupPage=yes
 LicenseFile=..\..\LICENSE.txt
 OutputDir=..\release
-OutputBaseFilename=KeyKeyTSF-1.0.3-x64-Setup
+OutputBaseFilename=KeyKeyTSF-1.0.4-x64-Setup
 Compression=lzma2/ultra64
 SolidCompression=yes
 WizardStyle=modern
@@ -88,3 +88,4 @@ begin
     end;
   end;
 end;
+

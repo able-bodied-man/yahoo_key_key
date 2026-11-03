@@ -1,4 +1,4 @@
-$ErrorActionPreference = 'Stop'
+﻿$ErrorActionPreference = 'Stop'
 
 $tsfRoot = Split-Path -Parent $PSScriptRoot
 $repoRoot = Split-Path -Parent $tsfRoot
@@ -75,8 +75,9 @@ if ($LASTEXITCODE -ne 0) {
     throw "Inno Setup failed with exit code $LASTEXITCODE"
 }
 
-$output = Join-Path $tsfRoot 'release\KeyKeyTSF-1.0.3-x64-Setup.exe'
+$output = Join-Path $tsfRoot 'release\KeyKeyTSF-1.0.4-x64-Setup.exe'
 if (-not (Test-Path $output)) {
     throw "Installer output not found: $output"
 }
 Write-Host "Built: $output"
+

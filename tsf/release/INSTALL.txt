@@ -1,4 +1,4 @@
-﻿Yahoo! KeyKey TSF bridge 1.0.3 (x64)
+﻿Yahoo! KeyKey TSF bridge 1.0.4 (x64)
 ====================================
 
 Requirements
@@ -8,7 +8,7 @@ Requirements
 
 Install with the EXE installer (recommended)
 -------------------------------------------
-1. Run KeyKeyTSF-1.0.3-x64-Setup.exe.
+1. Run KeyKeyTSF-1.0.4-x64-Setup.exe.
 2. Approve the UAC prompt.
 3. Follow the English wizard. The default folder is:
    C:\Program Files\Yahoo! KeyKey TSF
@@ -64,3 +64,4 @@ Limitations
 - Reuses the legacy out-of-process KeyKey server and its WinForms UI.
 - The local test certificate is intended for local installation only. Use a
   real code-signing certificate for public distribution.
+

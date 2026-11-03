@@ -152,27 +152,46 @@ Write-Host "Certificate thumbprint: $thumbprint"
 # make it the default input method for new processes.
 Write-Host 'Adding the Traditional Chinese input profile...'
 $tip = '0404:{F7802624-5E24-4F6A-9BFB-5B525966B27A}{21A09CEE-663F-4481-877D-DE1373C678FA}'
-try {
-    $list = Get-WinUserLanguageList
-    $zh = $list | Where-Object { $_.LanguageTag -eq 'zh-Hant-TW' } | Select-Object -First 1
-    if (-not $zh) {
-        $newLanguage = (New-WinUserLanguageList zh-TW | Select-Object -First 1)
-        $list.Add($newLanguage.PSObject.BaseObject)
-        Set-WinUserLanguageList $list -Force
+$profileReady = $false
+for ($attempt = 1; $attempt -le 2 -and -not $profileReady; $attempt++) {
+    try {
         $list = Get-WinUserLanguageList
         $zh = $list | Where-Object { $_.LanguageTag -eq 'zh-Hant-TW' } | Select-Object -First 1
-    }
+        if (-not $zh) {
+            # New-WinUserLanguageList returns the whole list as a single object,
+            # so take its first item directly. Select-Object -First 1 would keep
+            # the List object and List.Add would reject it.
+            $newLanguage = (New-WinUserLanguageList zh-TW)[0]
+            $list.Add($newLanguage)
+            Set-WinUserLanguageList $list -Force
+            $list = Get-WinUserLanguageList
+            $zh = $list | Where-Object { $_.LanguageTag -eq 'zh-Hant-TW' } | Select-Object -First 1
+        }
 
-    if ($zh) {
+        if (-not $zh) {
+            throw 'The zh-Hant-TW language could not be added.'
+        }
+
         $tips = $zh.InputMethodTips
         if (-not ($tips -contains $tip)) {
             $tips.Add($tip)
         }
         Set-WinUserLanguageList $list -Force
-        Set-WinDefaultInputMethodOverride -InputTip $tip
+        Set-WinDefaultInputMethodOverride -InputTip $tip | Out-Null
+
+        $verify = Get-WinUserLanguageList |
+            Where-Object { $_.LanguageTag -eq 'zh-Hant-TW' } |
+            Select-Object -First 1
+        $profileReady = $verify -and (@($verify.InputMethodTips) -contains $tip)
+        if (-not $profileReady) {
+            throw 'The input profile did not appear in the language list.'
+        }
+    } catch {
+        if ($attempt -ge 2) {
+            Write-Warning "Could not add the input profile: $($_.Exception.Message)"
+            Write-Warning 'Open Settings > Time & language > Language & region, add Traditional Chinese (Taiwan), then run the installer again.'
+        }
     }
-} catch {
-    Write-Warning "Could not update the user language list: $($_.Exception.Message)"
 }
 
 Write-Host ''
