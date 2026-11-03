@@ -1,0 +1,47 @@
+Yahoo! KeyKey TSF bridge 1.0.0 (x64)
+====================================
+
+Requirements
+------------
+- Windows 10/11 x64
+- An installed Yahoo! KeyKey 1.1.2535
+  (default location: C:\Program Files\Yahoo!\KeyKey)
+
+Install
+-------
+1. Extract this ZIP to a normal writable folder.
+2. Right-click install.ps1 and choose "Run with PowerShell" as Administrator,
+   or open an elevated PowerShell in this folder and run:
+
+       Set-ExecutionPolicy -Scope Process Bypass -Force
+       .\install.ps1
+
+3. Restart WhatsApp (or any app that was already open).
+4. Focus a text box and press Win+Space until
+   "Yahoo! KeyKey (TSF)" / "中文 (繁體) - Yahoo! KeyKey (TSF)" is selected.
+
+The installer creates a local code-signing certificate, trusts it on this
+machine, signs the DLL, installs it under C:\Program Files\KeyKeyTSF, and
+registers the TSF profile. It also adds the Traditional Chinese input profile
+to the current user.
+
+Troubleshooting
+---------------
+- Set KEYKEY_TSF_DEBUG=1 for the target app, restart it, and read
+  %TEMP%\KeyKeyTSF.log.
+- Restart ctfmon.exe / TextInputHost.exe (elevated) if the profile does not
+  appear.
+- Make sure KeyKeyServer.exe is installed and the registry value
+  HKLM\SOFTWARE\Yahoo\KeyKey\ServerLocation points to its folder.
+
+Uninstall
+---------
+Run uninstall.ps1 from an elevated PowerShell. Loaded DLL copies can remain
+locked until apps using them are restarted.
+
+Limitations
+-----------
+- x64 only.
+- Reuses the legacy out-of-process KeyKey server and its WinForms UI.
+- The local test certificate is intended for local installation only. Use a
+  real code-signing certificate for public distribution.

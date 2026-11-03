@@ -190,7 +190,7 @@ namespace TakaoPreference
                 this.TryAddValueInDictionary(this.m_generalDictionary, "RepeatLastCommitTextKey", "g");
                 this.TryAddValueInDictionary(this.m_generalDictionary, "KeyboardFormShouldFollowCursor", "false");
 
-                this.TryAddValueInDictionary(this.m_generalDictionary, "ModulesSuppressedFromUI", "ARRAY:");
+                this.TryAddValueInDictionary(this.m_generalDictionary, "ModulesSuppressedFromUI", "ARRAY:SmartMandarin, TraditionalMandarins, Generic-simplex-cin");
 
                 // The default settings for the Traditional Phonetic Input Method
                 this.TryAddValueInDictionary(this.m_traditionalPhoneticDictionary, "KeyboardLayout", "Standard");

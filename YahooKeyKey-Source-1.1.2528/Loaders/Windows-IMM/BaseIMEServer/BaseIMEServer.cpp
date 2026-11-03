@@ -884,6 +884,22 @@ bool IMEServer::start()
         kvm.setKeyStringValue("RepeatLastCommitTextKey", "g");
         writeConfig = true;
     }
+
+    if (!kvm.hasKey("ModulesSuppressedFromUI")) {
+        PVPlistValue suppressed(PVPlistValue::Array);
+        PVPlistValue smartMandarin("SmartMandarin");
+        PVPlistValue traditionalMandarins("TraditionalMandarins");
+        PVPlistValue simplex("Generic-simplex-cin");
+        suppressed.addArrayElement(&smartMandarin);
+        suppressed.addArrayElement(&traditionalMandarins);
+        suppressed.addArrayElement(&simplex);
+
+        PVPlistValue* root = IMEServer::SharedLoader()->configRootDictionary();
+        if (root) {
+            root->setKeyValue("ModulesSuppressedFromUI", &suppressed);
+            writeConfig = true;
+        }
+    }
         
     if (writeConfig)
         IMEServer::SharedLoader()->syncLoaderConfig(true);
