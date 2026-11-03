@@ -1,0 +1,353 @@
+# Project memory - Yahoo! KeyKey TSF bridge
+
+> Handoff notes for AI agents and contributors. Last updated: 2026-11-03,
+> current release **v1.0.4**.
+>
+> Read this first, then `README.md` and `tsf/README.md`.
+
+## 1. What this project is
+
+This repository contains two things:
+
+1. The original open-source **Yahoo! KeyKey 1.1.2528** source (BSD license).
+2. A new **TSF bridge** (`tsf/`) that makes the installed legacy KeyKey engine
+   work in modern Windows text clients, especially WhatsApp from the Microsoft
+   Store.
+
+Why a bridge: the Store WhatsApp app is WinUI 3 / WebView2 and uses TSF. The
+legacy KeyKey client is an IMM32 IME (`KeyKey.ime`) and is not loaded by that
+app. The bridge is a TSF text service (`KeyKeyTSF.dll`) that talks to the
+installed legacy `KeyKeyServer.exe` over its original local RPC protocol
+(`ncalrpc`, interface `BISKeyKey`). The input engine, candidate window, status
+bar, databases, and OneKey features remain the original KeyKey code.
+
+```
+WhatsApp / Notepad / other TSF client
+  └─ KeyKeyTSF.dll                 TSF text service (this project)
+       ├─ ITfKeyEventSink          receives keys
+       ├─ ITfCompositionSink       owns the TSF composition
+       └─ local RPC (ncalrpc)
+            ▼
+     KeyKeyServer.exe               legacy KeyKey engine + UI
+       ├─ PlainVanilla loader
+       ├─ Smart Mandarin / Cangjie / Simplex
+       ├─ candidate panel + status bar
+       └─ KeyKey.db / user databases
+```
+
+## 2. Repository map
+
+| Path | Purpose |
+| --- | --- |
+| `README.md` | Project overview |
+| `README.txt` | Original KeyKey/OpenVanilla third-party notices |
+| `LICENSE.txt` | BSD license for the original source |
+| `YahooKeyKey-Source-1.1.2528/` | Original KeyKey source (do not modify for bridge work) |
+| `DataSource-1.1.2528/` | Data-source placeholders; licensed corpora are not included |
+| `orig/` | **Gitignored.** Original Yahoo! KeyKey 1.1.2535 x64 installer (proprietary payload) |
+| `tsf/` | TSF bridge, installers, docs, releases |
+| `tsf/KeyKeyTSF/` | C++ TSF DLL source and `build.cmd` |
+| `tsf/install.ps1` | Script installer: sign, copy, register, add input profile |
+| `tsf/uninstall.ps1` | Script uninstaller |
+| `tsf/installer/KeyKeyTSF.iss` | Inno Setup EXE installer definition |
+| `tsf/installer/build-installer.ps1` | Extracts the MSI from `orig/` and compiles the EXE |
+| `tsf/installer/keykey64.msi` | **Gitignored.** Extracted proprietary KeyKey MSI |
+| `tsf/release/` | Release notes, INSTALL.txt, built artifacts (artifacts gitignored) |
+| `tsf/TestClient/` | Small Win32 RichEdit test client |
+
+Tracked but generated/ignored: `tsf/KeyKeyTSF/build/`, `generated/`, release
+EXEs/ZIPs/DLLs, `cert-thumbprint.txt`, `installed-path.txt`.
+
+## 3. Key identifiers
+
+| Item | Value |
+| --- | --- |
+| TSF CLSID | `{F7802624-5E24-4F6A-9BFB-5B525966B27A}` |
+| TSF profile GUID | `{21A09CEE-663F-4481-877D-DE1373C678FA}` |
+| Input tip (language list) | `0404:{F7802624-5E24-4F6A-9BFB-5B525966B27A}{21A09CEE-663F-4481-877D-DE1373C678FA}` |
+| Language | `zh-Hant-TW`, LANGID `0x0404` |
+| Display name | `Yahoo! KeyKey (TSF)` |
+| Inno AppId | `{205BC078-BF4D-45D3-837E-CDA0395C066C}` |
+| Legacy server registry | `HKLM\SOFTWARE\Yahoo\KeyKey` value `ServerLocation` |
+| Legacy server executable | `KeyKeyServer.exe` (default `C:\Program Files\Yahoo!\KeyKey\`) |
+| COM registration | `HKLM\SOFTWARE\Classes\CLSID\{F7802624-...}\InprocServer32` |
+| TSF profile registration | `HKLM\SOFTWARE\Microsoft\CTF\TIP\{F7802624-...}` |
+
+The CLSID/profile GUIDs are defined in `tsf/KeyKeyTSF/Globals.cpp`. The
+install scripts duplicate them; keep all copies in sync.
+
+Environment variable `KEYKEY_TSF_DEBUG=1` enables `%TEMP%\KeyKeyTSF.log` for the
+DLL.
+
+## 4. Build
+
+Prerequisites:
+
+- Windows 10/11 x64
+- Visual Studio 2022 Build Tools with the C++ workload and a Windows 11 SDK
+- `midl`, `cl`, `rc`, `link` on the developer-command-prompt path
+- Inno Setup 6 (`ISCC.exe`) for the EXE installer
+- PowerShell 5.1 or 7
+
+Build the DLL:
+
+```powershell
+cd tsf\KeyKeyTSF
+.\build.cmd
+# output: tsf\KeyKeyTSF\build\KeyKeyTSF.dll
+```
+
+`build.cmd` calls `VsDevCmd.bat`, runs `midl` for the two RPC IDL files into
+`generated/`, compiles with `/std:c++17`, and links x64.
+
+Build the single EXE installer:
+
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File tsf\installer\build-installer.ps1
+# output: tsf\release\KeyKeyTSF-<version>-x64-Setup.exe
+```
+
+`build-installer.ps1`:
+
+1. Requires `orig/YahooKeyKey-Windows-x64-1.1.2535-zh-TW.exe`.
+2. Finds the last `MSCF` CAB header at the end of the WEXTRACT EXE.
+3. Extracts `keykey64.msi` with `expand.exe` into `tsf/installer/keykey64.msi`.
+4. Runs Inno Setup `ISCC.exe` (looked up on PATH, then
+   `%LOCALAPPDATA%\Programs\Inno Setup 6\ISCC.exe`).
+
+The build does not need the original garbled `setup64.exe`.
+
+## 5. Install behavior
+
+### EXE installer (recommended)
+
+- Installs to `C:\Program Files\Yahoo! KeyKey TSF` (`{autopf}`).
+- Requires admin (`PrivilegesRequired=admin`).
+- Inno wizard is **English** (`Default.isl`); never reuse the original
+  `setup64.exe` UI, whose text is garbled.
+- Bundles `keykey64.msi` to `{tmp}` and deletes it after install.
+- At `ssPostInstall`, runs:
+
+  ```text
+  powershell -NoProfile -ExecutionPolicy Bypass -File "{app}\install.ps1" -InstallDir "{app}"
+  ```
+
+  If `HKLM\SOFTWARE\Yahoo\KeyKey\ServerLocation\KeyKeyServer.exe` is missing, it
+  also passes `-KeyKeyMsi "{tmp}\keykey64.msi"`.
+- Silent flags used for testing: `/VERYSILENT /NORESTART /SUPPRESSMSGBOXES`.
+
+### ZIP / script installer
+
+- Default install dir is `C:\Program Files\KeyKeyTSF` (`-InstallDir` overrides).
+- Expects Yahoo! KeyKey to be installed already.
+- Self-elevates through UAC if not admin.
+
+### Common install steps (`tsf/install.ps1`)
+
+1. Creates or reuses a local code-signing certificate
+   `CN=KeyKey TSF Local Test` in `LocalMachine\My`.
+2. Exports it and trusts it in `LocalMachine\Root` and
+   `LocalMachine\TrustedPublisher`.
+3. Signs `KeyKeyTSF.dll` with PowerShell `Set-AuthenticodeSignature` (no
+   `signtool` dependency).
+4. Copies it to `<InstallDir>\KeyKeyTSF-<yyyyMMdd-HHmmss>.dll`.
+5. Writes `installed-path.txt` and `cert-thumbprint.txt` next to the script.
+6. Runs `regsvr32 /s` on the new DLL.
+7. Adds `zh-Hant-TW` and the input tip to the current user's language list and
+   calls `Set-WinDefaultInputMethodOverride`.
+8. Re-reads the language list and verifies the tip is present (retries once).
+
+Each install uses a new timestamped DLL so an already-loaded copy does not block
+an update; the CLSID always points at the newest copy.
+
+## 6. Uninstall behavior
+
+EXE installs appear in **Settings > Apps > Installed apps** as
+**Yahoo! KeyKey TSF**. The Inno uninstaller runs `uninstall.ps1` via
+`[UninstallRun]`.
+
+`tsf/uninstall.ps1`:
+
+1. `regsvr32 /u` the DLL from `installed-path.txt`.
+2. Deletes the CTF TIP and CLSID keys directly, including `WOW6432Node`.
+3. Removes the certificate from `My`, `Root`, and `TrustedPublisher`.
+4. Removes the TSF tip from every language list entry; removes `zh-Hant-TW`
+   only if it has no remaining tips.
+5. Deletes the install directory.
+6. If files are locked by a running process, schedules their deletion with
+   `MoveFileEx(..., MOVEFILE_DELAY_UNTIL_REBOOT)`.
+7. Always exits `0` for best-effort cleanup.
+
+## 7. Release checklist
+
+Bump the version everywhere it appears:
+
+- `tsf/KeyKeyTSF/KeyKeyTSF.rc` (`FILEVERSION`, `PRODUCTVERSION`, strings)
+- `tsf/installer/KeyKeyTSF.iss` (`AppVersion`, `AppVerName`, `OutputBaseFilename`)
+- `tsf/installer/build-installer.ps1` (output filename)
+- `tsf/release/RELEASE_NOTES.md`
+- `tsf/release/INSTALL.txt`
+- `tsf/README.md` (EXE filename reference)
+
+Then:
+
+```powershell
+cd tsf\KeyKeyTSF; .\build.cmd; cd ..\..
+
+pwsh -NoProfile -ExecutionPolicy Bypass -File tsf\installer\build-installer.ps1
+```
+
+Build the ZIP from the same payload (DLL + scripts + docs):
+
+```powershell
+$root = (Get-Location).Path
+$rel = "$root\tsf\release"
+$stage = "$env:TEMP\keykey-zip"
+$v = '1.0.4'
+if (Test-Path $stage) { Remove-Item -Recurse -Force $stage }
+New-Item -ItemType Directory -Force $stage | Out-Null
+Copy-Item "$root\tsf\KeyKeyTSF\build\KeyKeyTSF.dll" $stage
+Copy-Item "$root\tsf\install.ps1" $stage
+Copy-Item "$root\tsf\uninstall.ps1" $stage
+Copy-Item "$rel\INSTALL.txt" $stage
+Copy-Item "$root\tsf\README.md" $stage
+Copy-Item "$root\tsf\THIRD_PARTY_NOTICES.md" $stage
+Copy-Item "$root\LICENSE.txt" $stage
+Compress-Archive -Path "$stage\*" -DestinationPath "$rel\KeyKeyTSF-$v-x64.zip" -Force
+```
+
+Regenerate hashes (Setup EXE, ZIP, DLL):
+
+```powershell
+$files = @("KeyKeyTSF-$v-x64-Setup.exe", "KeyKeyTSF-$v-x64.zip", 'KeyKeyTSF.dll')
+$lines = foreach ($f in $files) {
+    "$((Get-FileHash "$rel\$f" -Algorithm SHA256).Hash.ToLower())  $f"
+}
+$lines | Set-Content "$rel\SHA256SUMS.txt" -Encoding ASCII
+```
+
+Test (see section 8), then commit and publish:
+
+```powershell
+git add -A
+git commit -m "Release KeyKey TSF $v"
+git push origin master
+git tag -a "v$v" -m "KeyKey TSF $v"
+git push origin "v$v"
+
+gh release create "v$v" --title "KeyKey TSF $v (x64)" `
+  --notes-file tsf\release\RELEASE_NOTES.md `
+  "tsf\release\KeyKeyTSF-$v-x64-Setup.exe" `
+  "tsf\release\KeyKeyTSF-$v-x64.zip" `
+  "tsf\release\SHA256SUMS.txt" `
+  "tsf\release\KeyKeyTSF.dll#KeyKeyTSF-$v-x64.dll"
+```
+
+Repository: <https://github.com/able-bodied-man/yahoo_key_key>
+(remote is SSH: `git@github.com:able-bodied-man/yahoo_key_key.git`).
+
+## 8. Test checklist
+
+Silent install:
+
+```powershell
+$setup = 'tsf\release\KeyKeyTSF-1.0.4-x64-Setup.exe'
+$p = Start-Process $setup -ArgumentList '/VERYSILENT','/NORESTART','/SUPPRESSMSGBOXES' -Wait -PassThru
+$p.ExitCode   # expect 0
+```
+
+Verify:
+
+```powershell
+Test-Path 'C:\Program Files\Yahoo! KeyKey TSF'
+(Get-ItemProperty 'HKLM:\SOFTWARE\Classes\CLSID\{F7802624-5E24-4F6A-9BFB-5B525966B27A}\InprocServer32').'(default)'
+(Get-Item <that path>).VersionInfo.FileVersion      # expect 1.0.4.0
+Get-WinUserLanguageList | Where-Object LanguageTag -eq 'zh-Hant-TW'
+```
+
+Silent uninstall:
+
+```powershell
+$u = 'C:\Program Files\Yahoo! KeyKey TSF\unins000.exe'
+$p = Start-Process $u -ArgumentList '/VERYSILENT','/NORESTART','/SUPPRESSMSGBOXES' -Wait -PassThru
+$p.ExitCode   # expect 0
+Test-Path 'C:\Program Files\Yahoo! KeyKey TSF'   # expect False
+Test-Path 'HKLM:\SOFTWARE\Classes\CLSID\{F7802624-5E24-4F6A-9BFB-5B525966B27A}'  # False
+```
+
+Fresh-profile test (the bug that broke 1.0.3): remove the whole `zh-Hant-TW`
+entry from `Get-WinUserLanguageList`, run the installer, and confirm the
+language and the `{F7802624...}{21A09CEE...}` tip come back.
+
+Logs:
+
+- `%TEMP%\keykeytsf-install.log`
+- `%TEMP%\keykeytsf-install-error.txt`
+- `%TEMP%\keykeytsf-uninstall.log`
+- `%TEMP%\KeyKeyTSF.log` (only with `KEYKEY_TSF_DEBUG=1`)
+
+## 9. Gotchas and lessons learned
+
+### PowerShell language-list API
+
+- `New-WinUserLanguageList zh-TW` returns the **whole list as one pipeline
+  object**. `Select-Object -First 1` keeps that List, and `List.Add` then fails
+  with `Cannot find an overload for "Add" and the argument count: "1"`.
+  Use `(New-WinUserLanguageList zh-TW)[0]`.
+- In Windows PowerShell 5.1 `WinUserLanguage.InputMethodTips` is read-only.
+  Mutate the underlying `List<string>` with `.Add()` / `.Remove()`; do not
+  assign a new array to the property.
+- Always re-read the language list after `Set-WinUserLanguageList` and verify
+  the tip, because failures used to be swallowed as warnings.
+
+### Uninstall script
+
+- `uninstall.ps1` once started with `param([string])` (no variable name). That
+  is a parse error, so PowerShell exited with code 1 before the script ran and
+  Inno left files/registry behind. Test scripts by actually running them.
+- Loaded TSF DLLs can be locked by Explorer/WhatsApp/Notepad; the script
+  schedules them for reboot deletion.
+- `uninstall.ps1` deletes the whole `{app}` directory, including the Inno
+  uninstaller. Inno has already copied itself to `%TEMP%`, so this is safe.
+
+### Installer / MSI
+
+- The original `setup64.exe` UI is garbled. Do not ship or invoke it; its inner
+  `keykey64.msi` works fine.
+- On a machine where KeyKey is already admin-assigned, `msiexec /i` can return
+  `1625`. The EXE installer skips the MSI when `KeyKeyServer.exe` exists.
+- `install.ps1`'s error trap waits for Enter when hosted in a console; under
+  Inno's hidden `Exec` this can hang the installer if an error occurs. Keep
+  this in mind if adding failure paths.
+- The bundled MSI and `orig/` are proprietary and gitignored. Do not commit
+  them.
+- The self-signed certificate is for local installs only. Public distribution
+  needs a real code-signing certificate.
+
+### Build / source debt
+
+- `tsf/KeyKeyTSF/Register.cpp` currently writes its registration debug log to a
+  hard-coded `C:\Users\Able\AppData\Local\Temp\opencode\keykeytsf-register.log`.
+  It fails harmlessly elsewhere, but should use `%TEMP%`.
+- x64 only. 32-bit host processes need a 32-bit build.
+- `KEYKEY_TSF_DEBUG=1` must be set per-user before the target app starts.
+
+## 10. Current status (2026-11-03)
+
+- Latest release: **v1.0.4**.
+- Tags: `v1.0.0`, `v1.0.1`, `v1.0.2`, `v1.0.3`, `v1.0.4`, `tsf-preview`.
+- `master` includes the EXE installer, fixed uninstall, and the fresh-profile
+  fix.
+- Local test machine has 1.0.4 installed at
+  `C:\Program Files\Yahoo! KeyKey TSF`; the `zh-Hant-TW` list contains the
+  KeyKey TSF tip.
+- 1.0.3 is known broken for fresh installs (profile not added). Use 1.0.4+.
+
+## 11. Suggested next work
+
+- Replace the self-signed certificate with a real code-signing certificate.
+- Add a 32-bit build if 32-bit TSF hosts matter.
+- Move the registration log path to `%TEMP%`.
+- Improve the TSF UIless/touch-keyboard behavior; the current service reuses the
+  legacy WinForms candidate/status windows.
+- Consider adding automated install/uninstall smoke tests.

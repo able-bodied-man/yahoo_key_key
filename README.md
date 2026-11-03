@@ -11,6 +11,8 @@ engine work in modern Windows apps such as WhatsApp from the Microsoft Store.
 - `tsf/` — TSF text service for x64 Windows
 - `DataSource-1.1.2528/` — data-source placeholders (licensed corpora are not
   included)
+- `MEMORY.md` — agent handoff notes: architecture, build, release process, and
+  known pitfalls
 
 ## TSF bridge
 
@@ -23,17 +25,20 @@ legacy KeyKey behavior.
 See [`tsf/README.md`](tsf/README.md) for build, install, diagnostics, and
 limitations.
 
-Quick install from a release archive:
+Quick install from a release:
+
+1. Run `KeyKeyTSF-<version>-x64-Setup.exe` and approve UAC.
+2. Select **Yahoo! KeyKey (TSF)** with `Win+Space`.
+
+The EXE installer bundles the original KeyKey engine and installs it silently
+when needed. The ZIP release can also be installed from an elevated PowerShell:
 
 ```powershell
-# Run in an elevated PowerShell
 .\install.ps1
 ```
 
-Then select **Yahoo! KeyKey (TSF)** with `Win+Space`.
-
-The bridge requires an installed Yahoo! KeyKey 1.1.2535 and is currently x64
-only.
+The ZIP/script path requires an already installed Yahoo! KeyKey 1.1.2535. The
+bridge is currently x64 only.
 
 ## License
 
