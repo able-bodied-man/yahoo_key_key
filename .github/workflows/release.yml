@@ -135,7 +135,7 @@ jobs:
           )
           $keep = @('${{ steps.version.outputs.setup }}', 'SHA256SUMS.txt')
 
-          gh release view $tag --repo $env:GITHUB_REPOSITORY *> $null
+          gh release view $tag --repo $env:GITHUB_REPOSITORY 2>$null | Out-Null
           if ($LASTEXITCODE -eq 0) {
               Write-Host "Release $tag exists; updating assets."
               $existing = gh release view $tag --repo $env:GITHUB_REPOSITORY --json assets --jq '.assets[].name'
@@ -152,4 +152,11 @@ jobs:
                   --notes-file (Join-Path $rel 'RELEASE_NOTES.md')
           }
           if ($LASTEXITCODE -ne 0) { throw 'Publishing the GitHub release failed.' }
+
+          # Confirm the release still exists and carries exactly the expected assets.
+          $published = gh release view $tag --repo $env:GITHUB_REPOSITORY --json assets --jq '.assets[].name'
+          if ($LASTEXITCODE -ne 0) { throw "Release $tag could not be read back." }
+          foreach ($required in $keep) {
+              if ($published -notcontains $required) { throw "Release is missing $required." }
+          }
           Write-Host "Published $tag"
