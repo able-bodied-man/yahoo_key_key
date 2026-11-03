@@ -327,6 +327,10 @@ Logs:
   release workflow does this automatically; do not reintroduce a CAB scan.
 - The workflow depends on the v1.0.4 release asset staying available. If it is
   ever deleted, point the workflow at another release that ships a Setup EXE.
+- `gh release create` can leave the release as an untagged draft, which is
+  invisible to the public API and the releases page. The workflow reads the
+  release back and runs `gh release edit --draft=false` if needed. Do not skip
+  that verification.
 - On a machine where KeyKey is already admin-assigned, `msiexec /i` can return
   `1625`. The EXE installer skips the MSI when `KeyKeyServer.exe` exists.
 - `install.ps1`'s error trap waits for Enter when hosted in a console; under
