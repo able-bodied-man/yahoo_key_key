@@ -53,38 +53,45 @@ jobs:
           $asset = $release.assets | Where-Object { $_.name -like '*Setup.exe' } | Select-Object -First 1
           if (-not $asset) { throw 'The v1.0.4 Setup asset was not found.' }
 
-          $exe = Join-Path $env:RUNNER_TEMP 'keykey-legacy-setup.exe'
-          Invoke-WebRequest $asset.url -Headers @{ 'User-Agent' = 'keykey2-release'; 'Accept' = 'application/octet-stream' } -OutFile $exe
+          $setup = Join-Path $env:RUNNER_TEMP 'keykey-legacy-setup.exe'
+          Invoke-WebRequest $asset.url -Headers @{ 'User-Agent' = 'keykey2-release'; 'Accept' = 'application/octet-stream' } -OutFile $setup
 
-          $bytes = [IO.File]::ReadAllBytes($exe)
-          $offset = -1
-          for ($i = $bytes.Length - 4; $i -ge 0; $i--) {
-              if ($bytes[$i] -eq 0x4D -and $bytes[$i + 1] -eq 0x53 -and
-                  $bytes[$i + 2] -eq 0x43 -and $bytes[$i + 3] -eq 0x46) {
-                  $offset = $i
-                  break
+          # The v1.0.4 installer embeds keykey64.msi in its private payload. It
+          # extracts the MSI to a temporary folder for the bundled engine setup,
+          # so watch that folder and copy the file while it is still present.
+          $msiPath = Join-Path $env:GITHUB_WORKSPACE 'keykey2\installer\keykey64.msi'
+          $process = Start-Process -FilePath $setup `
+              -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART' `
+              -PassThru
+
+          $deadline = (Get-Date).AddMinutes(8)
+          while (-not (Test-Path $msiPath) -and (Get-Date) -lt $deadline) {
+              $candidate = Get-ChildItem -Path $env:TEMP -Directory -Filter 'is-*.tmp' -ErrorAction SilentlyContinue |
+                  ForEach-Object { Join-Path $_.FullName 'keykey64.msi' } |
+                  Where-Object { Test-Path $_ } |
+                  Select-Object -First 1
+              if ($candidate) {
+                  Copy-Item -LiteralPath $candidate -Destination $msiPath -Force
+                  Write-Host "Captured $candidate"
               }
-          }
-          if ($offset -lt 0) { throw 'No CAB payload found in the legacy Setup EXE.' }
-
-          $cab = Join-Path $env:RUNNER_TEMP 'keykey-orig.cab'
-          $stream = [IO.File]::Create($cab)
-          try {
-              $stream.Write($bytes, $offset, $bytes.Length - $offset)
-          }
-          finally {
-              $stream.Close()
+              elseif ($process.HasExited -and $process.ExitCode -ne 0) {
+                  throw "The legacy installer exited with code $($process.ExitCode) before the MSI was captured."
+              }
+              Start-Sleep -Milliseconds 200
           }
 
-          $extract = Join-Path $env:RUNNER_TEMP 'keykey-orig'
-          Remove-Item -Recurse -Force $extract -ErrorAction SilentlyContinue
-          New-Item -ItemType Directory -Force $extract | Out-Null
-          & "$env:SystemRoot\System32\expand.exe" -F:* $cab $extract | Out-Null
+          if (-not (Test-Path $msiPath)) {
+              throw 'keykey64.msi could not be captured from the legacy installer.'
+          }
 
-          $msi = Join-Path $extract 'keykey64.msi'
-          if (-not (Test-Path $msi)) { throw 'keykey64.msi was not found in the extracted payload.' }
-          Copy-Item -Force $msi 'keykey2/installer/keykey64.msi'
-          Write-Host 'Extracted keykey64.msi from the v1.0.4 installer.'
+          if (-not $process.WaitForExit(300000)) {
+              Write-Host 'The legacy installer is still running; stopping it.'
+              Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
+          }
+
+          $size = (Get-Item $msiPath).Length
+          if ($size -lt 1MB) { throw "Captured keykey64.msi looks too small ($size bytes)." }
+          Write-Host "Captured keykey64.msi ($size bytes)."
 
       - name: Build the Setup EXE
         shell: pwsh
