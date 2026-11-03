@@ -155,9 +155,19 @@ jobs:
           }
           if ($LASTEXITCODE -ne 0) { throw 'Publishing the GitHub release failed.' }
 
-          # Confirm the release still exists and carries exactly the expected assets.
-          $published = gh release view $tag --repo $env:GITHUB_REPOSITORY --json assets --jq '.assets[].name'
+          # Confirm the release exists and carries exactly the expected assets.
+          $meta = gh release view $tag --repo $env:GITHUB_REPOSITORY --json url,isDraft,isPrerelease,assets
           if ($LASTEXITCODE -ne 0) { throw "Release $tag could not be read back." }
+          Write-Host "::notice title=Release state::$($meta -replace "`n", ' ')"
+          $state = $meta | ConvertFrom-Json
+          if ($state.isDraft) {
+              Write-Host 'Release is a draft; publishing it.'
+              gh release edit $tag --repo $env:GITHUB_REPOSITORY --draft=false
+              if ($LASTEXITCODE -ne 0) { throw 'Publishing the draft release failed.' }
+              $meta = gh release view $tag --repo $env:GITHUB_REPOSITORY --json url,isDraft,isPrerelease,assets
+              Write-Host "::notice title=Release state after publish::$($meta -replace "`n", ' ')"
+          }
+          $published = ($meta | ConvertFrom-Json).assets.name
           foreach ($required in $keep) {
               if ($published -notcontains $required) { throw "Release is missing $required." }
           }
