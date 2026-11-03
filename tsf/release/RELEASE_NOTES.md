@@ -1,4 +1,4 @@
-﻿# KeyKey TSF 1.0.1
+﻿# KeyKey TSF 1.0.2
 
 A TSF text-service bridge that makes the legacy Yahoo! KeyKey input method work
 in modern Windows text clients, including WhatsApp from the Microsoft Store.
@@ -12,6 +12,8 @@ in modern Windows text clients, including WhatsApp from the Microsoft Store.
 - Installation progress and failures are printed instead of exiting silently.
 - Registration waits for `regsvr32` correctly, including paths containing
   spaces.
+- Input-language setup now works from PowerShell 7 as well as Windows
+  PowerShell 5.1.
 
 ## What is included
 
@@ -51,4 +53,5 @@ input-client layer with a TSF text service.
 ## SHA-256
 
 See `SHA256SUMS.txt` in the release assets.
+
 

@@ -1,4 +1,4 @@
-﻿Yahoo! KeyKey TSF bridge 1.0.1 (x64)
+﻿Yahoo! KeyKey TSF bridge 1.0.2 (x64)
 ====================================
 
 Requirements
@@ -48,4 +48,5 @@ Limitations
 - Reuses the legacy out-of-process KeyKey server and its WinForms UI.
 - The local test certificate is intended for local installation only. Use a
   real code-signing certificate for public distribution.
+
 

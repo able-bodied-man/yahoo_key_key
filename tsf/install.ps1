@@ -114,19 +114,21 @@ try {
     $list = Get-WinUserLanguageList
     $zh = $list | Where-Object { $_.LanguageTag -eq 'zh-Hant-TW' } | Select-Object -First 1
     if (-not $zh) {
-        $zh = (New-WinUserLanguageList zh-TW | Select-Object -First 1)
-        if (-not ($zh.InputMethodTips -contains $tip)) {
-            $zh.InputMethodTips.Add($tip)
-        }
-        $list.Add($zh)
+        $newLanguage = (New-WinUserLanguageList zh-TW | Select-Object -First 1)
+        $list.Add($newLanguage.PSObject.BaseObject)
+        Set-WinUserLanguageList $list -Force
+        $list = Get-WinUserLanguageList
+        $zh = $list | Where-Object { $_.LanguageTag -eq 'zh-Hant-TW' } | Select-Object -First 1
     }
-    else {
-        if (-not ($zh.InputMethodTips -contains $tip)) {
-            $zh.InputMethodTips.Add($tip)
+
+    if ($zh) {
+        $tips = $zh.InputMethodTips
+        if (-not ($tips -contains $tip)) {
+            $tips.Add($tip)
         }
+        Set-WinUserLanguageList $list -Force
+        Set-WinDefaultInputMethodOverride -InputTip $tip
     }
-    Set-WinUserLanguageList $list -Force
-    Set-WinDefaultInputMethodOverride -InputTip $tip
 } catch {
     Write-Warning "Could not update the user language list: $($_.Exception.Message)"
 }

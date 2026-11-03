@@ -57,13 +57,14 @@ The script runs `midl` for the legacy RPC IDL and then compiles
 
 ## Install
 
-Run an elevated PowerShell:
+Run from a normal PowerShell window:
 
 ```powershell
 .\install.ps1
 ```
 
-The installer:
+If the window is not elevated, the script relaunches itself through UAC. The
+installer:
 
 1. creates/reuses a local code-signing certificate
    (`CN=KeyKey TSF Local Test`),
