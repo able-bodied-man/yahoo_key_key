@@ -1,0 +1,166 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Resolve version
+        id: version
+        shell: pwsh
+        run: |
+          if ($env:GITHUB_REF_TYPE -eq 'tag') {
+            $tag = $env:GITHUB_REF_NAME
+          } else {
+            $version = (Select-String -Path 'keykey2/installer/KeyKey2.iss' -Pattern '^AppVersion=(.+)$').Matches[0].Groups[1].Value.Trim()
+            $tag = "v$version"
+          }
+          $version = $tag.TrimStart('v')
+          "tag=$tag" >> $env:GITHUB_OUTPUT
+          "version=$version" >> $env:GITHUB_OUTPUT
+          "setup=KeyKey2-$version-x64-Setup.exe" >> $env:GITHUB_OUTPUT
+          "zip=KeyKey2-$version-x64.zip" >> $env:GITHUB_OUTPUT
+          Write-Host "Releasing $tag"
+
+      - name: Install Inno Setup
+        shell: pwsh
+        run: choco install innosetup --no-progress -y
+
+      - name: Build the DLL
+        shell: cmd
+        run: |
+          cd keykey2\KeyKey2
+          build.cmd
+
+      - name: Fetch the legacy KeyKey MSI payload
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $headers = @{ 'User-Agent' = 'keykey2-release'; 'Accept' = 'application/vnd.github+json' }
+          $release = Invoke-RestMethod "https://api.github.com/repos/$env:GITHUB_REPOSITORY/releases/tags/v1.0.4" -Headers $headers
+          $asset = $release.assets | Where-Object { $_.name -like '*Setup.exe' } | Select-Object -First 1
+          if (-not $asset) { throw 'The v1.0.4 Setup asset was not found.' }
+
+          $exe = Join-Path $env:RUNNER_TEMP 'keykey-legacy-setup.exe'
+          Invoke-WebRequest $asset.url -Headers @{ 'User-Agent' = 'keykey2-release'; 'Accept' = 'application/octet-stream' } -OutFile $exe
+
+          $bytes = [IO.File]::ReadAllBytes($exe)
+          $offset = -1
+          for ($i = $bytes.Length - 4; $i -ge 0; $i--) {
+              if ($bytes[$i] -eq 0x4D -and $bytes[$i + 1] -eq 0x53 -and
+                  $bytes[$i + 2] -eq 0x43 -and $bytes[$i + 3] -eq 0x46) {
+                  $offset = $i
+                  break
+              }
+          }
+          if ($offset -lt 0) { throw 'No CAB payload found in the legacy Setup EXE.' }
+
+          $cab = Join-Path $env:RUNNER_TEMP 'keykey-orig.cab'
+          $stream = [IO.File]::Create($cab)
+          try {
+              $stream.Write($bytes, $offset, $bytes.Length - $offset)
+          }
+          finally {
+              $stream.Close()
+          }
+
+          $extract = Join-Path $env:RUNNER_TEMP 'keykey-orig'
+          Remove-Item -Recurse -Force $extract -ErrorAction SilentlyContinue
+          New-Item -ItemType Directory -Force $extract | Out-Null
+          & "$env:SystemRoot\System32\expand.exe" -F:* $cab $extract | Out-Null
+
+          $msi = Join-Path $extract 'keykey64.msi'
+          if (-not (Test-Path $msi)) { throw 'keykey64.msi was not found in the extracted payload.' }
+          Copy-Item -Force $msi 'keykey2/installer/keykey64.msi'
+          Write-Host 'Extracted keykey64.msi from the v1.0.4 installer.'
+
+      - name: Build the Setup EXE
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $iscc = 'C:\Program Files (x86)\Inno Setup 6\ISCC.exe'
+          if (-not (Test-Path $iscc)) {
+              $iscc = (Get-Command iscc.exe -ErrorAction Stop).Source
+          }
+          & $iscc (Join-Path $env:GITHUB_WORKSPACE 'keykey2\installer\KeyKey2.iss')
+          if ($LASTEXITCODE -ne 0) { throw "Inno Setup failed with exit code $LASTEXITCODE" }
+
+          $setup = Join-Path $env:GITHUB_WORKSPACE "keykey2\release\${{ steps.version.outputs.setup }}"
+          if (-not (Test-Path $setup)) { throw "Installer output not found: $setup" }
+          Write-Host "Built $setup"
+
+      - name: Build the ZIP and checksums
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $root = $env:GITHUB_WORKSPACE
+          $rel = Join-Path $root 'keykey2\release'
+          $stage = Join-Path $env:RUNNER_TEMP 'keykey2-zip'
+          Remove-Item -Recurse -Force $stage -ErrorAction SilentlyContinue
+          New-Item -ItemType Directory -Force $stage | Out-Null
+
+          Copy-Item (Join-Path $root 'keykey2\KeyKey2\build\KeyKey2.dll') $stage
+          Copy-Item (Join-Path $root 'keykey2\install.ps1') $stage
+          Copy-Item (Join-Path $root 'keykey2\uninstall.ps1') $stage
+          Copy-Item (Join-Path $rel 'INSTALL.txt') $stage
+          Copy-Item (Join-Path $root 'keykey2\README.md') $stage
+          Copy-Item (Join-Path $root 'keykey2\THIRD_PARTY_NOTICES.md') $stage
+          Copy-Item (Join-Path $root 'LICENSE.txt') $stage
+
+          $zip = Join-Path $rel '${{ steps.version.outputs.zip }}'
+          Compress-Archive -Path (Join-Path $stage '*') -DestinationPath $zip -Force
+
+          $files = @(
+              '${{ steps.version.outputs.setup }}',
+              '${{ steps.version.outputs.zip }}',
+              'KeyKey2.dll'
+          )
+          $lines = foreach ($file in $files) {
+              $path = Join-Path $rel $file
+              if ($file -eq 'KeyKey2.dll') {
+                  Copy-Item (Join-Path $root 'keykey2\KeyKey2\build\KeyKey2.dll') $path -Force
+              }
+              "$((Get-FileHash $path -Algorithm SHA256).Hash.ToLower())  $file"
+          }
+          $lines | Set-Content (Join-Path $rel 'SHA256SUMS.txt') -Encoding ASCII
+          Get-Content (Join-Path $rel 'SHA256SUMS.txt')
+
+      - name: Publish the GitHub release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $tag = '${{ steps.version.outputs.tag }}'
+          $title = "Yahoo! KeyKey 2 ${{ steps.version.outputs.version }} (x64)"
+          $rel = Join-Path $env:GITHUB_WORKSPACE 'keykey2\release'
+          $assets = @(
+              (Join-Path $rel '${{ steps.version.outputs.setup }}'),
+              (Join-Path $rel '${{ steps.version.outputs.zip }}'),
+              (Join-Path $rel 'KeyKey2.dll'),
+              (Join-Path $rel 'SHA256SUMS.txt')
+          )
+
+          gh release view $tag --repo $env:GITHUB_REPOSITORY *> $null
+          if ($LASTEXITCODE -eq 0) {
+              Write-Host "Release $tag exists; updating assets."
+              gh release upload $tag @assets --clobber --repo $env:GITHUB_REPOSITORY
+          }
+          else {
+              gh release create $tag @assets --repo $env:GITHUB_REPOSITORY --title $title `
+                  --notes-file (Join-Path $rel 'RELEASE_NOTES.md')
+          }
+          if ($LASTEXITCODE -ne 0) { throw 'Publishing the GitHub release failed.' }
+          Write-Host "Published $tag"

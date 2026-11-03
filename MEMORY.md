@@ -97,7 +97,8 @@ cd keykey2\KeyKey2
 # output: keykey2\KeyKey2\build\KeyKey2.dll
 ```
 
-`build.cmd` calls `VsDevCmd.bat`, runs `midl` for the two RPC IDL files into
+`build.cmd` locates Visual Studio through `vswhere` (falling back to the
+2022 Build Tools path), runs `midl` for the two RPC IDL files into
 `generated/`, compiles with `/std:c++17`, and links x64.
 
 Build the single EXE installer:
@@ -241,13 +242,22 @@ git commit -m "Release KeyKey 2 $v"
 git push origin master
 git tag -a "v$v" -m "KeyKey 2 $v"
 git push origin "v$v"
+```
 
+Pushing the tag triggers `.github/workflows/release.yml`, which builds the DLL
+and Setup EXE on `windows-latest`, creates the ZIP and hashes, and publishes the
+GitHub release. The workflow extracts `keykey64.msi` from the v1.0.4 Setup
+asset, so `orig/` is not needed in CI.
+
+Manual fallback with a local toolchain:
+
+```powershell
 gh release create "v$v" --title "Yahoo! KeyKey 2 $v (x64)" `
   --notes-file keykey2\release\RELEASE_NOTES.md `
   "keykey2\release\KeyKey2-$v-x64-Setup.exe" `
   "keykey2\release\KeyKey2-$v-x64.zip" `
   "keykey2\release\SHA256SUMS.txt" `
-  "keykey2\release\KeyKey2.dll#KeyKey2-$v-x64.dll"
+  "keykey2\release\KeyKey2.dll"
 ```
 
 Repository: <https://github.com/able-bodied-man/yahoo_key_key>
