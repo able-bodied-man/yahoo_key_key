@@ -273,15 +273,15 @@ void CandidateWindow::PaintInto(HDC dc, const RECT& client)
 
 namespace {
 
-const int kBaseHeight = 30;
-const int kBaseHeadWidth = 34;
-const int kBaseTailWidth = 12;
-const int kBaseIconSize = 24;
+const int kBaseHeight = 24;
+const int kBaseHeadWidth = 32;
+const int kBaseTailWidth = 13;
+const int kBaseIconSize = 20;
 const int kBaseItemGap = 4;
-const int kBaseTextGap = 4;
-const int kBaseArrowWidth = 10;
+const int kBaseTextGap = 3;
+const int kBaseArrowWidth = 8;
 const int kBaseLeftPadding = 3;
-const int kBaseFontHeight = 15;
+const int kBaseFontHeight = 11;
 
 int Scale(int value, double factor)
 {
@@ -631,10 +631,10 @@ void StatusBarWindow::PaintInto(HDC dc, const RECT& client)
     DrawTextW(mem, m_inputMethodName.c_str(), (int)m_inputMethodName.size(), &textRect,
               DT_SINGLELINE | DT_LEFT | DT_VCENTER | DT_NOPREFIX);
 
-    // the drop-down arrow of the input method button
-    {
-        const int arrowWidth = Scale(7, factor);
-        const int arrowHeight = Scale(4, factor);
+    // The drop-down arrow only shows while the input method button is hovered.
+    if (m_hoverItem == ItemInputMethod) {
+        const int arrowWidth = Scale(6, factor);
+        const int arrowHeight = Scale(3, factor);
         int cx = textRect.right - Scale(kBaseArrowWidth, factor) / 2;
         int cy = height / 2;
         POINT points[3] = {
