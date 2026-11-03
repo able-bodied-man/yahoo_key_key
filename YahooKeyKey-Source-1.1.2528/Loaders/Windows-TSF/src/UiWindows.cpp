@@ -273,15 +273,15 @@ void CandidateWindow::PaintInto(HDC dc, const RECT& client)
 
 namespace {
 
-const int kBaseHeight = 26;
-const int kBaseHeadWidth = 32;
-const int kBaseTailWidth = 13;
-const int kBaseIconSize = 20;
-const int kBaseItemGap = 8;
-const int kBaseTextGap = 3;
-const int kBaseArrowWidth = 9;
+const int kBaseHeight = 30;
+const int kBaseHeadWidth = 34;
+const int kBaseTailWidth = 12;
+const int kBaseIconSize = 24;
+const int kBaseItemGap = 4;
+const int kBaseTextGap = 4;
+const int kBaseArrowWidth = 10;
 const int kBaseLeftPadding = 3;
-const int kBaseFontHeight = 13;
+const int kBaseFontHeight = 15;
 
 int Scale(int value, double factor)
 {
@@ -566,6 +566,23 @@ void StatusBarWindow::PaintInto(HDC dc, const RECT& client)
     blit(m_head, 0, 0, Scale(kBaseHeadWidth, factor), height, 32, 23);
 
     const int iconTop = (height - iconSize) / 2;
+
+    // The original renders the input method button inside a rounded highlight.
+    {
+        RECT button = m_itemRects[ItemInputMethod];
+        button.top += 2;
+        button.bottom = height - 2;
+        HBRUSH fill = CreateSolidBrush(RGB(146, 106, 224));
+        HPEN edge = CreatePen(PS_SOLID, 1, RGB(214, 198, 246));
+        HGDIOBJ oldBrush = SelectObject(mem, fill);
+        HGDIOBJ oldPen = SelectObject(mem, edge);
+        RoundRect(mem, button.left, button.top, button.right, button.bottom, Scale(6, factor), Scale(6, factor));
+        SelectObject(mem, oldPen);
+        SelectObject(mem, oldBrush);
+        DeleteObject(edge);
+        DeleteObject(fill);
+    }
+
     blit(m_iconInputMethod, m_itemRects[ItemInputMethod].left, iconTop, iconSize, iconSize, 20, 20);
 
     SetBkMode(mem, TRANSPARENT);
