@@ -1,16 +1,26 @@
-# KeyKey TSF 1.0.0
+﻿# KeyKey TSF 1.0.1
 
 A TSF text-service bridge that makes the legacy Yahoo! KeyKey input method work
 in modern Windows text clients, including WhatsApp from the Microsoft Store.
 
+## Installer fixes in 1.0.1
+
+- The installer now relaunches itself elevated when started from a normal
+  PowerShell window.
+- Signing no longer requires `signtool.exe` or the Windows SDK; it uses the
+  built-in PowerShell Authenticode support.
+- Installation progress and failures are printed instead of exiting silently.
+- Registration waits for `regsvr32` correctly, including paths containing
+  spaces.
+
 ## What is included
 
-- `KeyKeyTSF.dll` (x64) — TSF text service
-- `install.ps1` — local code signing, installation, COM/TSF registration, and
+- `KeyKeyTSF.dll` (x64) 鈥?TSF text service
+- `install.ps1` 鈥?local code signing, installation, COM/TSF registration, and
   input-profile setup
-- `uninstall.ps1` — removes the TSF profile, COM registration, certificate, and
+- `uninstall.ps1` 鈥?removes the TSF profile, COM registration, certificate, and
   input-language entry
-- `INSTALL.txt` — quick installation and troubleshooting instructions
+- `INSTALL.txt` 鈥?quick installation and troubleshooting instructions
 
 ## Why a bridge
 
@@ -27,7 +37,7 @@ input-client layer with a TSF text service.
 
 ## Verification
 
-- Notepad/RichEdit: Cangjie `onf` + `Space` committed `你` (U+4F60).
+- Notepad/RichEdit: Cangjie `onf` + `Space` committed `浣燻 (U+4F60).
 - WhatsApp Store x64: the TSF service loaded in `WhatsApp.Root.exe`.
 
 ## Notes
@@ -41,3 +51,4 @@ input-client layer with a TSF text service.
 ## SHA-256
 
 See `SHA256SUMS.txt` in the release assets.
+

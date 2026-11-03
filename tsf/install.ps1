@@ -1,8 +1,46 @@
+param(
+    [switch]$Elevated
+)
+
 $ErrorActionPreference = 'Stop'
+
+function Test-Administrator {
+    $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
+    $principal = New-Object Security.Principal.WindowsPrincipal($identity)
+    return $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+}
+
+if (-not (Test-Administrator)) {
+    $scriptPath = $PSCommandPath
+    if (-not $scriptPath) {
+        $scriptPath = $MyInvocation.MyCommand.Path
+    }
+
+    Write-Host 'Administrator rights are required. Launching an elevated PowerShell...' -ForegroundColor Yellow
+    try {
+        $arguments = "-NoProfile -ExecutionPolicy Bypass -File `"$scriptPath`" -Elevated"
+        Start-Process -FilePath (Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe') `
+            -Verb RunAs `
+            -ArgumentList $arguments | Out-Null
+    }
+    catch {
+        Write-Host "Could not start the elevated installer: $($_.Exception.Message)" -ForegroundColor Red
+        Write-Host 'Open PowerShell as Administrator and run install.ps1 again.'
+    }
+    exit
+}
+
 Start-Transcript -Path 'C:\Users\Able\AppData\Local\Temp\opencode\keykeytsf-install.log' -Append
 trap {
-    $_ | Out-String | Out-File 'C:\Users\Able\AppData\Local\Temp\opencode\keykeytsf-install-error.txt' -Append
+    $message = $_ | Out-String
+    $message | Out-File 'C:\Users\Able\AppData\Local\Temp\opencode\keykeytsf-install-error.txt' -Encoding utf8 -Append
+    Write-Host ''
+    Write-Host 'Installation failed:' -ForegroundColor Red
+    Write-Host $message -ForegroundColor Red
     Stop-Transcript
+    if ($Host.Name -eq 'ConsoleHost') {
+        Read-Host 'Press Enter to close'
+    }
     exit 1
 }
 
@@ -20,13 +58,11 @@ if (-not (Test-Path $sourceDll)) {
     throw "Build the DLL first: $sourceDll not found"
 }
 
-if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
-    throw 'Run this script as Administrator.'
-}
-
+Write-Host "Installing from: $sourceDll"
 New-Item -ItemType Directory -Force -Path $installDir | Out-Null
 
 # Create or reuse a local code-signing certificate.
+Write-Host 'Preparing the local code-signing certificate...'
 $cert = Get-ChildItem Cert:\LocalMachine\My | Where-Object { $_.Subject -eq $subject } | Select-Object -First 1
 if (-not $cert) {
     $cert = New-SelfSignedCertificate `
@@ -49,15 +85,18 @@ Import-Certificate -FilePath $cerPath -CertStoreLocation Cert:\LocalMachine\Trus
 
 # Sign the DLL with the locally trusted certificate. This uses the built-in
 # PowerShell Authenticode support so the release does not require the Windows SDK.
+Write-Host 'Signing the TSF DLL...'
 $signature = Set-AuthenticodeSignature -FilePath $sourceDll -Certificate $cert -HashAlgorithm SHA256
 if ($signature.Status -ne 'Valid') {
     throw "Signing failed: $($signature.StatusMessage)"
 }
 
+Write-Host "Installing to: $targetDll"
 Copy-Item -Force $sourceDll $targetDll
 Set-Content -Path (Join-Path $PSScriptRoot 'installed-path.txt') -Value $targetDll -Encoding Unicode
 
 # Register the in-proc COM server and the TSF language profile.
+Write-Host 'Registering the TSF text service...'
 $regsvr = Join-Path $env:SystemRoot 'System32\regsvr32.exe'
 $process = Start-Process -FilePath $regsvr -ArgumentList "/s `"$targetDll`"" -Wait -PassThru
 if ($process.ExitCode -ne 0) {
@@ -69,6 +108,7 @@ Write-Host "Certificate thumbprint: $thumbprint"
 
 # Add the TSF input tip to the current user's Traditional Chinese profile and
 # make it the default input method for new processes.
+Write-Host 'Adding the Traditional Chinese input profile...'
 $tip = '0404:{F7802624-5E24-4F6A-9BFB-5B525966B27A}{21A09CEE-663F-4481-877D-DE1373C678FA}'
 try {
     $list = Get-WinUserLanguageList
@@ -91,5 +131,7 @@ try {
     Write-Warning "Could not update the user language list: $($_.Exception.Message)"
 }
 
-Write-Host 'TSF profile should be available in the input indicator. Select "Yahoo! KeyKey (TSF)" with Win+Space.'
+Write-Host ''
+Write-Host 'Installation complete.' -ForegroundColor Green
+Write-Host 'Restart WhatsApp or any already-running app, then select "Yahoo! KeyKey (TSF)" with Win+Space.'
 Stop-Transcript
