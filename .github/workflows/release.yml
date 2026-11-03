@@ -31,7 +31,6 @@ jobs:
           "tag=$tag" >> $env:GITHUB_OUTPUT
           "version=$version" >> $env:GITHUB_OUTPUT
           "setup=KeyKey2-$version-x64-Setup.exe" >> $env:GITHUB_OUTPUT
-          "zip=KeyKey2-$version-x64.zip" >> $env:GITHUB_OUTPUT
           Write-Host "Releasing $tag"
 
       - name: Install Inno Setup
@@ -108,40 +107,17 @@ jobs:
           if (-not (Test-Path $setup)) { throw "Installer output not found: $setup" }
           Write-Host "Built $setup"
 
-      - name: Build the ZIP and checksums
+      - name: Write checksums
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          $root = $env:GITHUB_WORKSPACE
-          $rel = Join-Path $root 'keykey2\release'
-          $stage = Join-Path $env:RUNNER_TEMP 'keykey2-zip'
-          Remove-Item -Recurse -Force $stage -ErrorAction SilentlyContinue
-          New-Item -ItemType Directory -Force $stage | Out-Null
+          $rel = Join-Path $env:GITHUB_WORKSPACE 'keykey2\release'
+          $name = '${{ steps.version.outputs.setup }}'
+          $path = Join-Path $rel $name
+          if (-not (Test-Path $path)) { throw "Missing $path" }
 
-          Copy-Item (Join-Path $root 'keykey2\KeyKey2\build\KeyKey2.dll') $stage
-          Copy-Item (Join-Path $root 'keykey2\install.ps1') $stage
-          Copy-Item (Join-Path $root 'keykey2\uninstall.ps1') $stage
-          Copy-Item (Join-Path $rel 'INSTALL.txt') $stage
-          Copy-Item (Join-Path $root 'keykey2\README.md') $stage
-          Copy-Item (Join-Path $root 'keykey2\THIRD_PARTY_NOTICES.md') $stage
-          Copy-Item (Join-Path $root 'LICENSE.txt') $stage
-
-          $zip = Join-Path $rel '${{ steps.version.outputs.zip }}'
-          Compress-Archive -Path (Join-Path $stage '*') -DestinationPath $zip -Force
-
-          $files = @(
-              '${{ steps.version.outputs.setup }}',
-              '${{ steps.version.outputs.zip }}',
-              'KeyKey2.dll'
-          )
-          $lines = foreach ($file in $files) {
-              $path = Join-Path $rel $file
-              if ($file -eq 'KeyKey2.dll') {
-                  Copy-Item (Join-Path $root 'keykey2\KeyKey2\build\KeyKey2.dll') $path -Force
-              }
-              "$((Get-FileHash $path -Algorithm SHA256).Hash.ToLower())  $file"
-          }
-          $lines | Set-Content (Join-Path $rel 'SHA256SUMS.txt') -Encoding ASCII
+          "$((Get-FileHash $path -Algorithm SHA256).Hash.ToLower())  $name" |
+              Set-Content (Join-Path $rel 'SHA256SUMS.txt') -Encoding ASCII
           Get-Content (Join-Path $rel 'SHA256SUMS.txt')
 
       - name: Publish the GitHub release
@@ -155,14 +131,20 @@ jobs:
           $rel = Join-Path $env:GITHUB_WORKSPACE 'keykey2\release'
           $assets = @(
               (Join-Path $rel '${{ steps.version.outputs.setup }}'),
-              (Join-Path $rel '${{ steps.version.outputs.zip }}'),
-              (Join-Path $rel 'KeyKey2.dll'),
               (Join-Path $rel 'SHA256SUMS.txt')
           )
+          $keep = @('${{ steps.version.outputs.setup }}', 'SHA256SUMS.txt')
 
           gh release view $tag --repo $env:GITHUB_REPOSITORY *> $null
           if ($LASTEXITCODE -eq 0) {
               Write-Host "Release $tag exists; updating assets."
+              $existing = gh release view $tag --repo $env:GITHUB_REPOSITORY --json assets --jq '.assets[].name'
+              foreach ($name in $existing) {
+                  if ($keep -notcontains $name) {
+                      Write-Host "Removing obsolete asset $name"
+                      gh release delete-asset $tag $name --yes --repo $env:GITHUB_REPOSITORY
+                  }
+              }
               gh release upload $tag @assets --clobber --repo $env:GITHUB_REPOSITORY
           }
           else {

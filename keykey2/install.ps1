@@ -68,7 +68,7 @@ if (-not (Test-Path $sourceDll)) {
     throw "Build the DLL first: $sourceDll not found"
 }
 
-# Ensure the legacy KeyKey engine is present. The standalone ZIP expects the
+# Ensure the legacy KeyKey engine is present. A source-checkout run expects the
 # user to install KeyKey first; the EXE installer passes -KeyKeyMsi so it can
 # install the bundled original MSI silently.
 $keyKeyLocation = $null

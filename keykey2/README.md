@@ -69,9 +69,11 @@ Run `KeyKey2-1.1.0-x64-Setup.exe` and follow the wizard. The installer:
 The wizard uses English text, so it does not show the garbled legacy
 `setup64.exe` dialogs.
 
-### ZIP / script installer
+### Script installer (source checkout only)
 
-Run from a normal PowerShell window:
+The release no longer ships a ZIP. If you are working from the repository and
+already have the legacy engine installed, you can run the script from the
+`keykey2` folder in a normal PowerShell window:
 
 ```powershell
 .\install.ps1
@@ -171,7 +173,7 @@ of the KeyKey look and behavior.
 With the EXE installer, remove **Yahoo! KeyKey 2** from
 **Settings > Apps > Installed apps**.
 
-With the ZIP installer:
+With a script install from a source checkout:
 
 ```powershell
 .\uninstall.ps1

@@ -32,15 +32,12 @@ Quick install from a release:
 2. Select **Yahoo! KeyKey 2** with `Win+Space`.
 
 The EXE installer bundles the original KeyKey engine and installs it silently
-when needed. The ZIP release can also be installed from an elevated PowerShell:
+when needed. It installs to `C:\Program Files\Yahoo!\KeyKey2`. The installed
+folder also contains `install.ps1` and `uninstall.ps1` for troubleshooting; a
+source checkout can be installed manually with `install.ps1` if the legacy
+engine is already present.
 
-```powershell
-.\install.ps1
-```
-
-The ZIP/script path requires an already installed Yahoo! KeyKey 1.1.2535. The
-bridge is currently x64 only. It installs to
-`C:\Program Files\Yahoo!\KeyKey2`.
+The bridge is currently x64 only.
 
 ## License
 

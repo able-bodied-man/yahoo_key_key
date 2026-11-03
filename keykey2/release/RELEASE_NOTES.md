@@ -10,6 +10,8 @@ from the Microsoft Store.
   anywhere in the product, DLL, installer, logs, or documentation.
 - The default install folder is now `C:\Program Files\Yahoo!\KeyKey2`.
   Upgrading from 1.0.x migrates to the new folder automatically.
+- The release now ships only the Setup EXE and its checksum; the ZIP and loose
+  DLL assets were redundant.
 - The service DLL is now `KeyKey2.dll` and release files use the `KeyKey2-`
   prefix.
 - Diagnostics use `KEYKEY2_DEBUG` and write `%TEMP%\KeyKey2.log`.
@@ -55,13 +57,11 @@ from the Microsoft Store.
 ## What is included
 
 - `KeyKey2-1.1.0-x64-Setup.exe` - one-step installer (recommended)
-- `KeyKey2-1.1.0-x64.zip` - manual installation for advanced users
-- `KeyKey2.dll` (x64) - Windows text service
-- `install.ps1` - local code signing, installation, COM registration, and
-  input-profile setup
-- `uninstall.ps1` - removes the language profile, COM registration,
-  certificate, and input-language entry
-- `INSTALL.txt` - quick installation and troubleshooting instructions
+- `SHA256SUMS.txt` - SHA-256 checksum for the installer
+
+The installer deploys `KeyKey2.dll`, `install.ps1`, `uninstall.ps1`,
+`INSTALL.txt`, `README.md`, and the license/notice files into
+`C:\Program Files\Yahoo!\KeyKey2`.
 
 ## Why a bridge
 

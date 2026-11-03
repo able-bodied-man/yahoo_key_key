@@ -6,8 +6,8 @@ Requirements
 - Windows 10/11 x64
 - Administrator access for installation
 
-Install with the EXE installer (recommended)
--------------------------------------------
+Install
+-------
 1. Run KeyKey2-1.1.0-x64-Setup.exe.
 2. Approve the UAC prompt.
 3. Follow the English wizard. The default folder is:
@@ -20,25 +20,9 @@ If Yahoo! KeyKey 1.1.2535 is not installed, the installer installs the bundled
 original KeyKey engine silently first. If KeyKey is already installed, it is
 left untouched.
 
-Install from the ZIP (advanced)
--------------------------------
-1. Extract this ZIP to a normal writable folder.
-2. Open a PowerShell window in this folder and run:
-
-       Set-ExecutionPolicy -Scope Process Bypass -Force
-       .\install.ps1
-
-   If PowerShell is not elevated, the installer automatically relaunches an
-   elevated Windows PowerShell window. Approve the UAC prompt.
-
-3. Restart WhatsApp (or any app that was already open).
-4. Focus a text box and press Win+Space until
-   "Yahoo! KeyKey 2" is selected.
-
-The ZIP installer creates a local code-signing certificate, trusts it on this
-machine, signs the DLL, installs it under C:\Program Files\Yahoo!\KeyKey2, and
-registers the language profile. It also adds the Traditional Chinese input
-profile to the current user. Yahoo! KeyKey must already be installed.
+The installer also deploys KeyKey2.dll, install.ps1, uninstall.ps1, README.md,
+and the license/notice files into the install folder. Running the Setup is the
+supported path; the scripts are there for troubleshooting.
 
 Troubleshooting
 ---------------
@@ -55,8 +39,6 @@ Use "Apps & features" / "Add or remove programs" and remove
 "Yahoo! KeyKey 2". The uninstaller removes the registration, certificate,
 and input profile. If a running app still holds the DLL, the file is removed
 on the next Windows restart.
-
-For the ZIP installation, run uninstall.ps1 from an elevated PowerShell.
 
 Limitations
 -----------

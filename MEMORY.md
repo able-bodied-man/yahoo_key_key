@@ -57,7 +57,7 @@ WhatsApp / Notepad / other modern text client
 | `keykey2/TestClient/` | Small Win32 RichEdit test client |
 
 Tracked but generated/ignored: `keykey2/KeyKey2/build/`, `generated/`, release
-EXEs/ZIPs/DLLs, `cert-thumbprint.txt`, `installed-path.txt`.
+EXEs/DLLs, `cert-thumbprint.txt`, `installed-path.txt`.
 
 ## 3. Key identifiers
 
@@ -140,7 +140,7 @@ The build does not need the original garbled `setup64.exe`.
   also passes `-KeyKeyMsi "{tmp}\keykey64.msi"`.
 - Silent flags used for testing: `/VERYSILENT /NORESTART /SUPPRESSMSGBOXES`.
 
-### ZIP / script installer
+### Script installer (source checkout)
 
 - Default install dir is `C:\Program Files\Yahoo!\KeyKey2` (`-InstallDir`
   overrides).
@@ -205,29 +205,10 @@ cd keykey2\KeyKey2; .\build.cmd; cd ..\..
 pwsh -NoProfile -ExecutionPolicy Bypass -File keykey2\installer\build-installer.ps1
 ```
 
-Build the ZIP from the same payload (DLL + scripts + docs):
+Regenerate the checksum for the Setup EXE:
 
 ```powershell
-$root = (Get-Location).Path
-$rel = "$root\keykey2\release"
-$stage = "$env:TEMP\keykey2-zip"
-$v = '1.1.0'
-if (Test-Path $stage) { Remove-Item -Recurse -Force $stage }
-New-Item -ItemType Directory -Force $stage | Out-Null
-Copy-Item "$root\keykey2\KeyKey2\build\KeyKey2.dll" $stage
-Copy-Item "$root\keykey2\install.ps1" $stage
-Copy-Item "$root\keykey2\uninstall.ps1" $stage
-Copy-Item "$rel\INSTALL.txt" $stage
-Copy-Item "$root\keykey2\README.md" $stage
-Copy-Item "$root\keykey2\THIRD_PARTY_NOTICES.md" $stage
-Copy-Item "$root\LICENSE.txt" $stage
-Compress-Archive -Path "$stage\*" -DestinationPath "$rel\KeyKey2-$v-x64.zip" -Force
-```
-
-Regenerate hashes (Setup EXE, ZIP, DLL):
-
-```powershell
-$files = @("KeyKey2-$v-x64-Setup.exe", "KeyKey2-$v-x64.zip", 'KeyKey2.dll')
+$files = @("KeyKey2-$v-x64-Setup.exe")
 $lines = foreach ($f in $files) {
     "$((Get-FileHash "$rel\$f" -Algorithm SHA256).Hash.ToLower())  $f"
 }
@@ -245,10 +226,13 @@ git push origin "v$v"
 ```
 
 Pushing the tag triggers `.github/workflows/release.yml`, which builds the DLL
-and Setup EXE on `windows-latest`, creates the ZIP and hashes, and publishes the
-GitHub release. CI has no access to `orig/`, so the workflow downloads the
-v1.0.4 Setup asset, runs it silently, and copies `keykey64.msi` out of its
-temporary folder while the bundled engine install is running.
+and Setup EXE on `windows-latest`, writes `SHA256SUMS.txt`, and publishes the
+GitHub release. The release carries only the Setup EXE and its checksum; there
+is no ZIP or loose DLL asset. CI has no access to `orig/`, so the workflow
+downloads the v1.0.4 Setup asset, runs it silently, and copies `keykey64.msi`
+out of its temporary folder while the bundled engine install is running. The
+workflow also deletes any release asset that is not the Setup EXE or the
+checksum file.
 
 Manual fallback with a local toolchain:
 
@@ -256,9 +240,7 @@ Manual fallback with a local toolchain:
 gh release create "v$v" --title "Yahoo! KeyKey 2 $v (x64)" `
   --notes-file keykey2\release\RELEASE_NOTES.md `
   "keykey2\release\KeyKey2-$v-x64-Setup.exe" `
-  "keykey2\release\KeyKey2-$v-x64.zip" `
-  "keykey2\release\SHA256SUMS.txt" `
-  "keykey2\release\KeyKey2.dll"
+  "keykey2\release\SHA256SUMS.txt"
 ```
 
 Repository: <https://github.com/able-bodied-man/yahoo_key_key>
@@ -363,6 +345,9 @@ Logs:
 ## 10. Current status (2026-11-03)
 
 - Latest release: **v1.1.0** (product rename and new install folder).
+- Release assets are intentionally minimal: `KeyKey2-<version>-x64-Setup.exe`
+  and `SHA256SUMS.txt` only. The old ZIP and loose DLL assets were removed as
+  redundant.
 - Tags: `v1.0.0`, `v1.0.1`, `v1.0.2`, `v1.0.3`, `v1.0.4`, `v1.1.0`, and the
   historical preview tag.
 - Releases are built and published by `.github/workflows/release.yml` from the
