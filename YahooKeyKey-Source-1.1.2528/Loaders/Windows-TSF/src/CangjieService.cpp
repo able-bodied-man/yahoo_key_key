@@ -390,6 +390,16 @@ STDMETHODIMP CangjieService::OnKeyDown(ITfContext* pic, WPARAM wParam, LPARAM lP
 
     EngineResult result = _engine.OnKey(key.keyCode, key.keyModifiers);
 
+    static LONG s_loggedKeys = 0;
+    if (s_loggedKeys < 60) {
+        InterlockedIncrement(&s_loggedKeys);
+        KeyKeyLog(L"key ovk=0x%04x handled=%d composing='%s' candidates=%u commit='%s'",
+                  key.keyCode, (int)result.handled,
+                  result.composingText.c_str(),
+                  (unsigned)result.candidates.size(),
+                  result.commit.c_str());
+    }
+
     if (result.commit.empty() && !result.composing) {
         *pfEaten = result.handled ? TRUE : FALSE;
         if (result.handled)
@@ -493,8 +503,16 @@ void CangjieService::_UpdateUi(const EngineResult& result)
         return;
 
     if (result.composing) {
+        // Without a caret rectangle the window would land at the top-left corner
+        // of the screen and look like it never appeared.
+        if (!_caretValid) {
+            _caretX = 240;
+            _caretY = 240;
+        }
         _candidateWindow.SetAnchor(_caretX, _caretY);
         _candidateWindow.Show(result.composingText, result.candidates, result.highlight);
+        KeyKeyLog(L"candidates shown: %u item(s) at anchor %d,%d",
+                  (unsigned)result.candidates.size(), _caretX, _caretY);
     }
     else {
         _candidateWindow.Hide();

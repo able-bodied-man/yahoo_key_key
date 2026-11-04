@@ -113,7 +113,14 @@ EngineResult CangjieEngine::OnKey(unsigned int keyCode, unsigned int keyModifier
             return result;
 
         std::wstring candidate = m_code + (wchar_t)keyCode;
-        if (!CinTable::Shared().IsPrefix(candidate)) {
+
+        // A key is acceptable when the code so far is either the beginning of a
+        // longer code or a complete code on its own. Only testing for prefixes
+        // rejected every terminal code - 56,532 of the 65,675 entries, which is
+        // why the candidate list never appeared for codes like 人大口 (okr).
+        const bool extendable = CinTable::Shared().IsPrefix(candidate);
+        const std::vector<std::wstring>* complete = CinTable::Shared().Lookup(candidate);
+        if (!extendable && !complete) {
             result.handled = false;   // not a valid code, leave the key alone
             return result;
         }
@@ -124,8 +131,7 @@ EngineResult CangjieEngine::OnKey(unsigned int keyCode, unsigned int keyModifier
 
         // A complete, unambiguous code commits straight away, like KeyKey does:
         // no longer code extends it and there is exactly one character.
-        const bool extendable = CinTable::Shared().IsPrefix(m_code);
-        if (m_candidates.size() == 1 && !extendable) {
+        if (m_candidates.size() == 1 && !CinTable::Shared().IsPrefix(m_code)) {
             result.commit = m_candidates[0];
             Reset();
             result.composing = false;
