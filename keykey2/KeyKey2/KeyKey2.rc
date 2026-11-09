@@ -9,8 +9,8 @@ BEGIN
 END
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 1,1,1,0
- PRODUCTVERSION 1,1,1,0
+ FILEVERSION 1,1,2,0
+ PRODUCTVERSION 1,1,2,0
  FILEFLAGSMASK 0x3fL
  FILEFLAGS 0x0L
  FILEOS 0x40004L
@@ -23,11 +23,11 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "Yahoo! Inc."
             VALUE "FileDescription", "Yahoo! KeyKey 2 Text Service"
-            VALUE "FileVersion", "1.1.1.0"
+            VALUE "FileVersion", "1.1.2.0"
             VALUE "InternalName", "KeyKey2"
             VALUE "OriginalFilename", "KeyKey2.dll"
             VALUE "ProductName", "Yahoo! KeyKey 2"
-            VALUE "ProductVersion", "1.1.1.0"
+            VALUE "ProductVersion", "1.1.2.0"
         END
     END
     BLOCK "VarFileInfo"
@@ -35,6 +35,7 @@ BEGIN
         VALUE "Translation", 0x404, 1200
     END
 END
+
 
 
 

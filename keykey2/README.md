@@ -59,7 +59,7 @@ The script runs `midl` for the legacy RPC IDL and then compiles
 
 ### EXE installer (recommended)
 
-Run `KeyKey2-1.1.1-x64-Setup.exe` and follow the wizard. The installer:
+Run `KeyKey2-1.1.2-x64-Setup.exe` and follow the wizard. The installer:
 
 1. checks whether Yahoo! KeyKey 1.1.2535 is already installed,
 2. installs the bundled original MSI silently if it is missing,
@@ -183,4 +183,5 @@ Both paths unregister the language profile and COM class, remove the test
 certificate, and remove the profile from the user language list. DLLs that are
 still loaded by running processes are scheduled for deletion on the next
 Windows restart.
+
 

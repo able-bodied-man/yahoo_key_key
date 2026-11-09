@@ -794,17 +794,24 @@ bool CKeyKeyTextService::ActivateServer()
         }
     }
 
-    if (!m_rpc->SetClientEndpoint(m_clientEndpoint))
-    {
-        return false;
-    }
-
     std::wstring name;
     int statusX = 0;
     int statusY = 0;
     if (!m_rpc->Activate(false, name, statusX, statusY))
     {
         Log(L"ActivateServer: BISActivate failed");
+        return false;
+    }
+
+    // The server only records the client endpoint when that context is already
+    // the active one, so this must come after BISActivate. The original IMM
+    // client uses the same order. Without it, candidate clicks cannot send the
+    // selection key back to us.
+    if (!m_rpc->SetClientEndpoint(m_clientEndpoint))
+    {
+        Log(L"ActivateServer: SetClientEndpoint failed");
+        std::wstring residue;
+        m_rpc->Deactivate(residue);
         return false;
     }
 

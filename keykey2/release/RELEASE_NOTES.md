@@ -1,8 +1,17 @@
-# Yahoo! KeyKey 2 1.1.1
+# Yahoo! KeyKey 2 1.1.2
 
 Yahoo! KeyKey 2 is a Windows text-service bridge that makes the legacy Yahoo!
 KeyKey input method work in modern Windows text clients, including WhatsApp
 from the Microsoft Store.
+
+## New in 1.1.2
+
+- Candidate lists are now clickable: click a candidate to commit it.
+- Clicking a candidate can open the **associated phrase** (關聯詞) panel, just
+  like the legacy input method.
+- The client RPC endpoint is now registered after the server context is
+  activated. Previously the server ignored it, so clicks had nowhere to send
+  the selection and it logged `No client endpoint is available`.
 
 ## New in 1.1.1
 

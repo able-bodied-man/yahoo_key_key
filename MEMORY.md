@@ -1,7 +1,7 @@
 ﻿# Project memory - Yahoo! KeyKey 2 bridge
 
 > Handoff notes for AI agents and contributors. Last updated: 2026-11-03,
-> current release **v1.1.1**.
+> current release **v1.1.2**.
 >
 > Read this first, then `README.md` and `keykey2/README.md`.
 
@@ -251,7 +251,7 @@ Repository: <https://github.com/able-bodied-man/yahoo_key_key>
 Silent install:
 
 ```powershell
-$setup = 'keykey2\release\KeyKey2-1.1.1-x64-Setup.exe'
+$setup = 'keykey2\release\KeyKey2-1.1.2-x64-Setup.exe'
 $p = Start-Process $setup -ArgumentList '/VERYSILENT','/NORESTART','/SUPPRESSMSGBOXES' -Wait -PassThru
 $p.ExitCode   # expect 0
 ```
@@ -261,7 +261,7 @@ Verify:
 ```powershell
 Test-Path 'C:\Program Files\Yahoo!\KeyKey2'
 (Get-ItemProperty 'HKLM:\SOFTWARE\Classes\CLSID\{F7802624-5E24-4F6A-9BFB-5B525966B27A}\InprocServer32').'(default)'
-(Get-Item <that path>).VersionInfo.FileVersion      # expect 1.1.1.0
+(Get-Item <that path>).VersionInfo.FileVersion      # expect 1.1.2.0
 Get-WinUserLanguageList | Where-Object LanguageTag -eq 'zh-Hant-TW'
 ```
 
@@ -351,6 +351,14 @@ Logs:
   server windows from that flag and from whether the composition is empty.
 - In Cangjie, the server may not report candidates until Space is pressed, so
   type the code and press Space to see the candidate page.
+- `BISSetCurrentClientRPCEndpoint` only records the endpoint when the calling
+  context is already the server's **active** context. Call it **after**
+  `BISActivate`, exactly like the old IMM client. With the old reversed order,
+  the candidate window could not send clicks back and the server logged
+  `SendCharToClient: No client endpoint is available`.
+- With the endpoint set, clicking a candidate sends a fake key
+  (`code=0xFFFF`), commits the choice, and lets the server open the associated
+  phrase panel.
 
 ### Build / source debt
 
@@ -359,21 +367,23 @@ Logs:
 
 ## 10. Current status (2026-11-09)
 
-- Latest release: **v1.1.1** (shows the composition input buffer and candidate
-  panel again).
+- Latest release: **v1.1.2** (clickable candidates and associated phrases).
 - Release assets are intentionally minimal: `KeyKey2-<version>-x64-Setup.exe`
   and `SHA256SUMS.txt` only. The old ZIP and loose DLL assets were removed as
   redundant.
-- Tags: `v1.0.0`, `v1.0.1`, `v1.0.2`, `v1.0.3`, `v1.0.4`, `v1.1.0`, `v1.1.1`, and the
+- Tags: `v1.0.0`, `v1.0.1`, `v1.0.2`, `v1.0.3`, `v1.0.4`, `v1.1.0`, `v1.1.1`, `v1.1.2`, and the
   historical preview tag.
 - Releases are built and published by `.github/workflows/release.yml` from the
   `v*` tag; no local toolchain is needed.
 - `master` includes the EXE installer, fixed uninstall, the fresh-profile fix,
-  the KeyKey 2 rename, the tag-driven release workflow, and the 1.1.1 UI fix.
+  the KeyKey 2 rename, the tag-driven release workflow, the 1.1.1 UI fix, and
+  the 1.1.2 candidate-click fix.
 - 1.0.3 is known broken for fresh installs (profile not added). Use 1.0.4+.
 - 1.1.0 installs to `C:\Program Files\Yahoo!\KeyKey2` and upgrades over 1.0.x
   automatically (same Inno AppId, `UsePreviousAppDir=no`).
 - 1.1.1 restores the missing legacy composition and candidate windows.
+- 1.1.2 makes the candidate window clickable and shows the associated phrase
+  panel after a selection.
 
 ## 11. Suggested next work
 
@@ -382,4 +392,5 @@ Logs:
 - Improve the UIless/touch-keyboard behavior; the current service reuses the
   legacy WinForms candidate/status windows.
 - Consider adding automated install/uninstall smoke tests.
+
 

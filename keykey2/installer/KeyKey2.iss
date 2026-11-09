@@ -1,8 +1,8 @@
 ﻿[Setup]
 AppId={{205BC078-BF4D-45D3-837E-CDA0395C066C}
 AppName=Yahoo! KeyKey 2
-AppVersion=1.1.1
-AppVerName=Yahoo! KeyKey 2 1.1.1
+AppVersion=1.1.2
+AppVerName=Yahoo! KeyKey 2 1.1.2
 AppPublisher=Yahoo! KeyKey 2
 AppPublisherURL=https://github.com/able-bodied-man/yahoo_key_key
 AppSupportURL=https://github.com/able-bodied-man/yahoo_key_key/issues
@@ -13,7 +13,7 @@ UsePreviousAppDir=no
 DisableProgramGroupPage=yes
 LicenseFile=..\..\LICENSE.txt
 OutputDir=..\release
-OutputBaseFilename=KeyKey2-1.1.1-x64-Setup
+OutputBaseFilename=KeyKey2-1.1.2-x64-Setup
 Compression=lzma2/ultra64
 SolidCompression=yes
 WizardStyle=modern
@@ -89,5 +89,6 @@ begin
     end;
   end;
 end;
+
 
 
