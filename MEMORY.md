@@ -1,7 +1,7 @@
-# Project memory - Yahoo! KeyKey 2 bridge
+﻿# Project memory - Yahoo! KeyKey 2 bridge
 
 > Handoff notes for AI agents and contributors. Last updated: 2026-11-03,
-> current release **v1.1.0**.
+> current release **v1.1.1**.
 >
 > Read this first, then `README.md` and `keykey2/README.md`.
 
@@ -24,16 +24,16 @@ OneKey features remain the original KeyKey code.
 
 ```
 WhatsApp / Notepad / other modern text client
-  └─ KeyKey2.dll                   text service (this project)
-       ├─ ITfKeyEventSink          receives keys
-       ├─ ITfCompositionSink       owns the composition
-       └─ local RPC (ncalrpc)
-            ▼
+  鈹斺攢 KeyKey2.dll                   text service (this project)
+       鈹溾攢 ITfKeyEventSink          receives keys
+       鈹溾攢 ITfCompositionSink       owns the composition
+       鈹斺攢 local RPC (ncalrpc)
+            鈻?
      KeyKeyServer.exe               legacy KeyKey engine + UI
-       ├─ PlainVanilla loader
-       ├─ Smart Mandarin / Cangjie / Simplex
-       ├─ candidate panel + status bar
-       └─ KeyKey.db / user databases
+       鈹溾攢 PlainVanilla loader
+       鈹溾攢 Smart Mandarin / Cangjie / Simplex
+       鈹溾攢 candidate panel + status bar
+       鈹斺攢 KeyKey.db / user databases
 ```
 
 ## 2. Repository map
@@ -251,7 +251,7 @@ Repository: <https://github.com/able-bodied-man/yahoo_key_key>
 Silent install:
 
 ```powershell
-$setup = 'keykey2\release\KeyKey2-1.1.0-x64-Setup.exe'
+$setup = 'keykey2\release\KeyKey2-1.1.1-x64-Setup.exe'
 $p = Start-Process $setup -ArgumentList '/VERYSILENT','/NORESTART','/SUPPRESSMSGBOXES' -Wait -PassThru
 $p.ExitCode   # expect 0
 ```
@@ -261,7 +261,7 @@ Verify:
 ```powershell
 Test-Path 'C:\Program Files\Yahoo!\KeyKey2'
 (Get-ItemProperty 'HKLM:\SOFTWARE\Classes\CLSID\{F7802624-5E24-4F6A-9BFB-5B525966B27A}\InprocServer32').'(default)'
-(Get-Item <that path>).VersionInfo.FileVersion      # expect 1.1.0.0
+(Get-Item <that path>).VersionInfo.FileVersion      # expect 1.1.1.0
 Get-WinUserLanguageList | Where-Object LanguageTag -eq 'zh-Hant-TW'
 ```
 
@@ -341,26 +341,39 @@ Logs:
 - The self-signed certificate is for local installs only. Public distribution
   needs a real code-signing certificate.
 
+### Composition and candidate UI
+
+- The legacy server fills its `InputBuffer` and `CandidatePanel` windows while
+  handling a key, but it does **not** show them. The TSF client must call
+  `BISShowInputBuffer` and `BISShowCandidatePanel` explicitly, otherwise only
+  inline composition text appears and the candidate list never shows.
+- `BISHandleKey` returns `candidatePanelVisible`; the bridge now shows/hides the
+  server windows from that flag and from whether the composition is empty.
+- In Cangjie, the server may not report candidates until Space is pressed, so
+  type the code and press Space to see the candidate page.
+
 ### Build / source debt
 
 - x64 only. 32-bit host processes need a 32-bit build.
 - `KEYKEY2_DEBUG=1` must be set per-user before the target app starts.
 
-## 10. Current status (2026-11-03)
+## 10. Current status (2026-11-09)
 
-- Latest release: **v1.1.0** (product rename and new install folder).
+- Latest release: **v1.1.1** (shows the composition input buffer and candidate
+  panel again).
 - Release assets are intentionally minimal: `KeyKey2-<version>-x64-Setup.exe`
   and `SHA256SUMS.txt` only. The old ZIP and loose DLL assets were removed as
   redundant.
-- Tags: `v1.0.0`, `v1.0.1`, `v1.0.2`, `v1.0.3`, `v1.0.4`, `v1.1.0`, and the
+- Tags: `v1.0.0`, `v1.0.1`, `v1.0.2`, `v1.0.3`, `v1.0.4`, `v1.1.0`, `v1.1.1`, and the
   historical preview tag.
 - Releases are built and published by `.github/workflows/release.yml` from the
   `v*` tag; no local toolchain is needed.
 - `master` includes the EXE installer, fixed uninstall, the fresh-profile fix,
-  the KeyKey 2 rename, and the tag-driven release workflow.
+  the KeyKey 2 rename, the tag-driven release workflow, and the 1.1.1 UI fix.
 - 1.0.3 is known broken for fresh installs (profile not added). Use 1.0.4+.
 - 1.1.0 installs to `C:\Program Files\Yahoo!\KeyKey2` and upgrades over 1.0.x
   automatically (same Inno AppId, `UsePreviousAppDir=no`).
+- 1.1.1 restores the missing legacy composition and candidate windows.
 
 ## 11. Suggested next work
 
@@ -369,3 +382,4 @@ Logs:
 - Improve the UIless/touch-keyboard behavior; the current service reuses the
   legacy WinForms candidate/status windows.
 - Consider adding automated install/uninstall smoke tests.
+

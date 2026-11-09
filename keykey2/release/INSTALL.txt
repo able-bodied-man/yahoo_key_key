@@ -1,4 +1,4 @@
-Yahoo! KeyKey 2 1.1.0 (x64)
+﻿Yahoo! KeyKey 2 1.1.1 (x64)
 ===========================
 
 Requirements
@@ -8,7 +8,7 @@ Requirements
 
 Install
 -------
-1. Run KeyKey2-1.1.0-x64-Setup.exe.
+1. Run KeyKey2-1.1.1-x64-Setup.exe.
 2. Approve the UAC prompt.
 3. Follow the English wizard. The default folder is:
    C:\Program Files\Yahoo!\KeyKey2
@@ -46,3 +46,4 @@ Limitations
 - Reuses the legacy out-of-process KeyKey server and its WinForms UI.
 - The local test certificate is intended for local installation only. Use a
   real code-signing certificate for public distribution.
+

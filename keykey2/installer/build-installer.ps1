@@ -75,9 +75,10 @@ if ($LASTEXITCODE -ne 0) {
     throw "Inno Setup failed with exit code $LASTEXITCODE"
 }
 
-$output = Join-Path $keykey2Root 'release\KeyKey2-1.1.0-x64-Setup.exe'
+$output = Join-Path $keykey2Root 'release\KeyKey2-1.1.1-x64-Setup.exe'
 if (-not (Test-Path $output)) {
     throw "Installer output not found: $output"
 }
 Write-Host "Built: $output"
+
 

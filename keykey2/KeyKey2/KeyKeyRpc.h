@@ -15,6 +15,8 @@ namespace KeyKey
         bool candidatePanelVisible = false;
         bool shouldUpdateCandidatePanel = false;
         unsigned int highlightedCandidateIndex = 0;
+        std::wstring candidatePage;
+        std::wstring candidateKeys;
         std::wstring actionVerb;
         std::wstring actionParameter;
     };
@@ -42,6 +44,8 @@ namespace KeyKey
         bool HideStatusBar();
         bool SetInputBufferPosition(int x, int y);
         bool SetCandidatePanelPosition(int x, int y);
+        bool ShowInputBuffer();
+        bool ShowCandidatePanel();
         bool HideInputBuffer();
         bool HideCandidatePanel();
         bool HideToolTip();

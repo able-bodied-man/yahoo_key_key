@@ -111,6 +111,24 @@ namespace KeyKeyRpc
         return ok;
     }
 
+    bool CallShowInputBuffer(BISContext context)
+    {
+        bool ok = false;
+        RpcTryExcept { BISShowInputBuffer(context); ok = true; }
+        RpcExcept(1) { ok = false; }
+        RpcEndExcept;
+        return ok;
+    }
+
+    bool CallShowCandidatePanel(BISContext context)
+    {
+        bool ok = false;
+        RpcTryExcept { BISShowCandidatePanel(context); ok = true; }
+        RpcExcept(1) { ok = false; }
+        RpcEndExcept;
+        return ok;
+    }
+
     bool CallHideInputBuffer(BISContext context)
     {
         bool ok = false;

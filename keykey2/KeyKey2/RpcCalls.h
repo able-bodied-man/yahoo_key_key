@@ -19,6 +19,8 @@ namespace KeyKeyRpc
     bool CallHideStatusBar(BISContext context);
     bool CallSetInputBufferPosition(BISContext context, int x, int y);
     bool CallSetCandidatePanelPosition(BISContext context, int x, int y);
+    bool CallShowInputBuffer(BISContext context);
+    bool CallShowCandidatePanel(BISContext context);
     bool CallHideInputBuffer(BISContext context);
     bool CallHideCandidatePanel(BISContext context);
     bool CallHideToolTip(BISContext context);

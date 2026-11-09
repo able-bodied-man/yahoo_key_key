@@ -916,8 +916,10 @@ bool CKeyKeyTextService::HandleServerKey(unsigned int keyCode, unsigned int modi
         return false;
     }
 
-    Log(L"HandleServerKey: code=0x%X mods=0x%X handled=%d committed=%s composition=%s", keyCode, modifiers,
-        result.handled ? 1 : 0, result.committed.c_str(), result.composition.c_str());
+    Log(L"HandleServerKey: code=0x%X mods=0x%X handled=%d candidate=%d update=%d pageLen=%u keys=%s committed=%s composition=%s", keyCode, modifiers,
+        result.handled ? 1 : 0, result.candidatePanelVisible ? 1 : 0, result.shouldUpdateCandidatePanel ? 1 : 0,
+        static_cast<unsigned>(result.candidatePage.length()), result.candidateKeys.c_str(),
+        result.committed.c_str(), result.composition.c_str());
 
     if (!result.handled && result.composition.empty())
     {
@@ -934,6 +936,11 @@ bool CKeyKeyTextService::HandleServerKey(unsigned int keyCode, unsigned int modi
                 m_context->RequestEditSession(m_clientId, session, TF_ES_SYNC | TF_ES_READWRITE, &editResult);
                 session->Release();
             }
+        }
+        if (m_rpc && m_serverActive)
+        {
+            m_rpc->HideInputBuffer();
+            m_rpc->HideCandidatePanel();
         }
         eat = false;
         return true;
@@ -1448,7 +1455,38 @@ HRESULT CKeyKeyTextService::ApplyKeyResult(TfEditCookie ec, const KeyKey::KeyRes
         compositionRange->Release();
     }
 
-    UpdateServerUiPosition(ec);
+    // The legacy server owns the composition (input buffer) and candidate
+    // windows. It fills their content while handling the key, but the TSF
+    // client must explicitly show/hide them, exactly like the old IMM client.
+    if (m_rpc && m_serverActive)
+    {
+        bool showInputResult = false;
+        bool showCandidateResult = false;
+        if (!result.composition.empty())
+        {
+            showInputResult = m_rpc->ShowInputBuffer();
+            UpdateServerUiPosition(ec);
+        }
+        else
+        {
+            m_rpc->HideInputBuffer();
+            UpdateServerUiPosition(ec);
+        }
+
+        if (result.candidatePanelVisible)
+        {
+            showCandidateResult = m_rpc->ShowCandidatePanel();
+        }
+        else
+        {
+            m_rpc->HideCandidatePanel();
+        }
+
+        Log(L"ApplyKeyResult UI: compositionLen=%u candidate=%d showInput=%d showCandidate=%d",
+            static_cast<unsigned>(result.composition.length()), result.candidatePanelVisible ? 1 : 0,
+            showInputResult ? 1 : 0, showCandidateResult ? 1 : 0);
+    }
+
     return S_OK;
 }
 

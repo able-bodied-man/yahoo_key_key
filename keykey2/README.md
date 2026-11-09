@@ -1,4 +1,4 @@
-# Yahoo! KeyKey 2
+﻿# Yahoo! KeyKey 2
 
 Yahoo! KeyKey 2 is a **Windows text-service bridge** for the legacy Yahoo! KeyKey
 input method. It does not reimplement the input engine. It loads the existing
@@ -59,7 +59,7 @@ The script runs `midl` for the legacy RPC IDL and then compiles
 
 ### EXE installer (recommended)
 
-Run `KeyKey2-1.1.0-x64-Setup.exe` and follow the wizard. The installer:
+Run `KeyKey2-1.1.1-x64-Setup.exe` and follow the wizard. The installer:
 
 1. checks whether Yahoo! KeyKey 1.1.2535 is already installed,
 2. installs the bundled original MSI silently if it is missing,
@@ -119,7 +119,7 @@ cl /nologo /EHsc /std:c++17 /DUNICODE /D_UNICODE testclient.cpp /link /SUBSYSTEM
 
 Select the KeyKey 2 input method and type a Bopomofo syllable such as
 `su3` followed by `Enter`. With the legacy Smart Mandarin selected, the
-committed result is `你` (U+4F60).
+committed result is `浣燻 (U+4F60).
 
 The legacy server's current primary input method is whatever is stored in
 `%APPDATA%\Yahoo! KeyKey\com.yahoo.KeyKey.plist` (`PrimaryInputMethod`). It can
@@ -150,7 +150,7 @@ If a target application does not load the service:
 Tested on Windows 11 build 26200 with the installed Yahoo! KeyKey 1.1.2535:
 
 - Notepad (modern text document): selected `Yahoo! KeyKey 2`, typed Cangjie
-  `onf` then `Space`, and the document contained `你` (U+4F60).
+  `onf` then `Space`, and the document contained `浣燻 (U+4F60).
 - WhatsApp `2.2641.101.0` x64 from the Microsoft Store (WinUI 3 + WebView2):
   selecting the profile caused `KeyKey2-<version>.dll` to load inside
   `WhatsApp.Root.exe`. The Store app exposes its composer through WebView2, so
@@ -183,3 +183,4 @@ Both paths unregister the language profile and COM class, remove the test
 certificate, and remove the profile from the user language list. DLLs that are
 still loaded by running processes are scheduled for deletion on the next
 Windows restart.
+

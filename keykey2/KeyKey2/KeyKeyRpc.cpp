@@ -210,6 +210,8 @@ namespace KeyKey
         result.candidatePanelVisible = candidateVisible != FALSE;
         result.shouldUpdateCandidatePanel = shouldUpdate != FALSE;
         result.highlightedCandidateIndex = highlighted;
+        result.candidatePage = candidatePage.data();
+        result.candidateKeys = candidateKeys.data();
         result.actionVerb = actionVerb.data();
         result.actionParameter = actionParameter.data();
         return true;
@@ -252,6 +254,22 @@ namespace KeyKey
         AutoLock lock(m_cs);
         if (!m_context) return false;
         if (!KeyKeyRpc::CallSetCandidatePanelPosition(m_context, x, y)) { m_context = nullptr; return false; }
+        return true;
+    }
+
+    bool RpcClient::ShowInputBuffer()
+    {
+        AutoLock lock(m_cs);
+        if (!m_context) return false;
+        if (!KeyKeyRpc::CallShowInputBuffer(m_context)) { m_context = nullptr; return false; }
+        return true;
+    }
+
+    bool RpcClient::ShowCandidatePanel()
+    {
+        AutoLock lock(m_cs);
+        if (!m_context) return false;
+        if (!KeyKeyRpc::CallShowCandidatePanel(m_context)) { m_context = nullptr; return false; }
         return true;
     }
 

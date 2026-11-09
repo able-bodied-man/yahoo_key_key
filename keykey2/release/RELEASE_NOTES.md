@@ -1,8 +1,17 @@
-# Yahoo! KeyKey 2 1.1.0
+# Yahoo! KeyKey 2 1.1.1
 
 Yahoo! KeyKey 2 is a Windows text-service bridge that makes the legacy Yahoo!
 KeyKey input method work in modern Windows text clients, including WhatsApp
 from the Microsoft Store.
+
+## New in 1.1.1
+
+- Restored the legacy composition box that shows the typed Cangjie strokes
+  (for example `人大口`).
+- Restored the candidate list when more than one candidate matches.
+- The bridge now tells the legacy server to show and hide its input-buffer and
+  candidate windows, matching the original IMM client behavior.
+- The windows are hidden again when the composition ends or is cancelled.
 
 ## New in 1.1.0
 
