@@ -76,6 +76,7 @@ private:
     DWORD _dwKeySinkCookie;
 
     CangjieEngine _engine;
+    InputBufferWindow _inputBufferWindow;
     CandidateWindow _candidateWindow;
     StatusBarWindow _statusBar;
     bool _windowsReady;

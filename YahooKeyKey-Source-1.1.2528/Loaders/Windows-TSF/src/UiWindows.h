@@ -1,11 +1,14 @@
 //
-// UiWindows.h - the two windows the input method owns
+// UiWindows.h - the floating windows the input method owns
 //
-//   CandidateWindow: the floating composition + candidate bar next to the caret
-//   StatusBarWindow: KeyKey's own status bar, drawn from KeyKey's own bitmaps
+//   InputBufferWindow: the large lavender box with the radical sequence and its
+//                      purple caret, like KeyKey's composing buffer
+//   CandidateWindow:   the black candidate list with numbered rows, the
+//                      highlighted row and the (page) counter
+//   StatusBarWindow:   KeyKey's original status bar
 //
-// Both are plain WS_POPUP windows with WS_EX_NOACTIVATE so they never steal the
-// keyboard focus from the application that is being typed into.
+// All are WS_EX_NOACTIVATE WS_POPUP windows so they never take the focus away
+// from the application being typed into.
 //
 
 #ifndef KEYKEY_UI_WINDOWS_H
@@ -17,31 +20,53 @@
 #include <string>
 #include <vector>
 
-class CandidateWindow {
+// The lavender composing buffer: one line of radicals plus a purple caret.
+class InputBufferWindow {
 public:
     bool Create(HINSTANCE instance);
     void Destroy();
 
-    void Show(const std::wstring& composing, const std::vector<std::wstring>& candidates, int highlight);
+    void Show(const std::wstring& composing, int anchorX, int anchorY);
     void Hide();
     bool Visible() const { return m_visible; }
-
-    // Screen coordinates of the caret; the window opens just below it.
-    void SetAnchor(int x, int y);
+    int Height() const { return m_height; }
 
 private:
     static LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
     LRESULT HandleMessage(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
     void PaintInto(HDC dc, const RECT& client);
-    void Relayout();
 
     HWND m_window = nullptr;
     bool m_visible = false;
-    int m_anchorX = 0;
-    int m_anchorY = 0;
-    std::wstring m_composing;
+    std::wstring m_text;
+    int m_width = 0;
+    int m_height = 0;
+};
+
+// The candidate list: black panel, numbered rows, one highlighted row, (page).
+class CandidateWindow {
+public:
+    bool Create(HINSTANCE instance);
+    void Destroy();
+
+    void Show(const std::vector<std::wstring>& candidates, int highlight,
+              int anchorX, int anchorY);
+    void Hide();
+    bool Visible() const { return m_visible; }
+
+private:
+    static LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
+    LRESULT HandleMessage(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
+    void PaintInto(HDC dc, const RECT& client);
+    void Layout(int anchorX, int anchorY);
+
+    HWND m_window = nullptr;
+    bool m_visible = false;
     std::vector<std::wstring> m_candidates;
     int m_highlight = 0;
+    int m_rowHeight = 0;
+    int m_width = 0;
+    int m_height = 0;
 };
 
 // The bar replicates KeyKey's original: barbg background, Y! head, the input

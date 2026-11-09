@@ -12,22 +12,35 @@
 namespace {
 
 const wchar_t* kCandidateClass = L"KeyKeyTSFCandidateWindow";
+const wchar_t* kInputBufferClass = L"KeyKeyTSFInputBufferWindow";
 const wchar_t* kStatusBarClass = L"KeyKeyTSFStatusBar";
 
-const COLORREF kCandidateBackground = RGB(255, 255, 255);
-const COLORREF kCandidateBorder = RGB(120, 120, 120);
-const COLORREF kCandidateText = RGB(20, 20, 20);
-const COLORREF kComposingText = RGB(110, 110, 110);
-const COLORREF kHighlightBackground = RGB(0, 90, 170);
-const COLORREF kHighlightText = RGB(255, 255, 255);
+// Colours taken from KeyKey's own composing buffer and candidate window.
+const COLORREF kBufferBackground = RGB(238, 234, 247);
+const COLORREF kBufferBorder     = RGB(146, 133, 176);
+const COLORREF kBufferText       = RGB(48, 38, 78);
+const COLORREF kBufferCaret      = RGB(122, 62, 174);
 
-const COLORREF kStatusBackground = RGB(74, 47, 145);
-const COLORREF kStatusBackgroundEnglish = RGB(110, 110, 110);
-const COLORREF kStatusText = RGB(255, 255, 255);
+const COLORREF kCandidateBackground = RGB(0, 0, 0);
+const COLORREF kCandidateBorder     = RGB(84, 84, 84);
+const COLORREF kCandidateText       = RGB(240, 240, 240);
+const COLORREF kCandidateHighlight  = RGB(176, 139, 224);
+const COLORREF kCandidateTextOnHighlight = RGB(34, 24, 56);
+const COLORREF kCandidateNumberBox  = RGB(226, 223, 216);
+const COLORREF kCandidateNumberText = RGB(40, 40, 40);
+const COLORREF kCandidatePageText   = RGB(140, 140, 140);
 
-const int kCandidateHeight = 26;
-const int kPadding = 6;
-const int kItemSpacing = 4;
+const int kBufferFontHeight = 30;
+const int kBufferPaddingX = 10;
+const int kBufferPaddingY = 6;
+const int kBufferCaretWidth = 3;
+
+const int kCandidateFontHeight = 26;
+const int kCandidateRowHeight = 32;
+const int kCandidateNumberBoxSize = 16;
+const int kCandidatePaddingX = 8;
+const int kCandidateGap = 8;
+const int kCandidatePageHeight = 16;
 
 HFONT CreateUiFont(int pixelHeight, bool bold)
 {
@@ -40,23 +53,179 @@ HFONT CreateUiFont(int pixelHeight, bool bold)
     return CreateFontIndirectW(&lf);
 }
 
-int MeasureText(HDC dc, const std::wstring& text)
+int MeasureText(HDC dc, HFONT font, const std::wstring& text)
 {
+    if (text.empty())
+        return 0;
+    HFONT old = (HFONT)SelectObject(dc, font);
     SIZE size = { 0, 0 };
     GetTextExtentPoint32W(dc, text.c_str(), (int)text.size(), &size);
+    SelectObject(dc, old);
     return size.cx;
-}
-
-void DrawTextCentered(HDC dc, const std::wstring& text, const RECT& box)
-{
-    RECT target = box;
-    DrawTextW(dc, text.c_str(), (int)text.size(), &target,
-              DT_SINGLELINE | DT_CENTER | DT_VCENTER | DT_NOPREFIX);
 }
 
 } // namespace
 
-// ------------------------------------------------------------------ candidate
+// ------------------------------------------------------------- input buffer
+
+bool InputBufferWindow::Create(HINSTANCE instance)
+{
+    if (m_window)
+        return true;
+
+    WNDCLASSEXW wc = { 0 };
+    wc.cbSize = sizeof(wc);
+    wc.lpfnWndProc = &InputBufferWindow::WndProc;
+    wc.hInstance = instance;
+    wc.hCursor = LoadCursorW(nullptr, IDC_ARROW);
+    wc.lpszClassName = kInputBufferClass;
+    wc.hbrBackground = nullptr;
+    if (!RegisterClassExW(&wc) && GetLastError() != ERROR_CLASS_ALREADY_EXISTS)
+        return false;
+
+    m_window = CreateWindowExW(WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE | WS_EX_TOPMOST,
+                               kInputBufferClass, L"", WS_POPUP,
+                               0, 0, 10, 10, nullptr, nullptr, instance, this);
+    if (!m_window)
+        return false;
+
+    SetWindowLongPtrW(m_window, GWLP_USERDATA, (LONG_PTR)this);
+    return true;
+}
+
+void InputBufferWindow::Destroy()
+{
+    if (m_window) {
+        DestroyWindow(m_window);
+        m_window = nullptr;
+    }
+    m_visible = false;
+}
+
+void InputBufferWindow::Show(const std::wstring& composing, int anchorX, int anchorY)
+{
+    m_text = composing;
+    if (m_text.empty()) {
+        Hide();
+        return;
+    }
+    if (!m_window)
+        return;
+
+    HDC dc = GetDC(m_window);
+    HFONT font = CreateUiFont(kBufferFontHeight, false);
+    const int textWidth = MeasureText(dc, font, m_text);
+    DeleteObject(font);
+    ReleaseDC(m_window, dc);
+
+    m_height = kBufferFontHeight + kBufferPaddingY * 2;
+    m_width = textWidth + kBufferPaddingX * 2 + kBufferCaretWidth + 4;
+
+    RECT workArea = { 0, 0, 0, 0 };
+    SystemParametersInfoW(SPI_GETWORKAREA, 0, &workArea, 0);
+    int x = anchorX;
+    int y = anchorY + 4;
+    if (x + m_width > workArea.right)
+        x = workArea.right - m_width - 8;
+    if (y + m_height > workArea.bottom)
+        y = anchorY - m_height - 4;
+
+    SetWindowPos(m_window, HWND_TOPMOST, x, y, m_width, m_height,
+                 SWP_NOACTIVATE | SWP_SHOWWINDOW);
+
+    // rounded corners, like the original composing buffer
+    HRGN region = CreateRoundRectRgn(0, 0, m_width + 1, m_height + 1, 8, 8);
+    if (region)
+        SetWindowRgn(m_window, region, TRUE);
+
+    m_visible = true;
+    InvalidateRect(m_window, nullptr, TRUE);
+}
+
+void InputBufferWindow::Hide()
+{
+    if (m_window && m_visible)
+        ShowWindow(m_window, SW_HIDE);
+    m_visible = false;
+    m_text.clear();
+}
+
+LRESULT CALLBACK InputBufferWindow::WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
+{
+    InputBufferWindow* self = nullptr;
+    if (message == WM_NCCREATE) {
+        CREATESTRUCTW* create = (CREATESTRUCTW*)lParam;
+        self = (InputBufferWindow*)create->lpCreateParams;
+        SetWindowLongPtrW(hwnd, GWLP_USERDATA, (LONG_PTR)self);
+    }
+    else {
+        self = (InputBufferWindow*)GetWindowLongPtrW(hwnd, GWLP_USERDATA);
+    }
+
+    if (self)
+        return self->HandleMessage(hwnd, message, wParam, lParam);
+    return DefWindowProcW(hwnd, message, wParam, lParam);
+}
+
+LRESULT InputBufferWindow::HandleMessage(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
+{
+    switch (message) {
+    case WM_ERASEBKGND:
+        return 1;
+    case WM_PAINT: {
+        PAINTSTRUCT ps;
+        HDC dc = BeginPaint(hwnd, &ps);
+        RECT client;
+        GetClientRect(hwnd, &client);
+        PaintInto(dc, client);
+        EndPaint(hwnd, &ps);
+        return 0;
+    }
+    case WM_NCHITTEST:
+        return HTTRANSPARENT;    // clicks go through to the application
+    default:
+        break;
+    }
+    return DefWindowProcW(hwnd, message, wParam, lParam);
+}
+
+void InputBufferWindow::PaintInto(HDC dc, const RECT& client)
+{
+    HBRUSH background = CreateSolidBrush(kBufferBackground);
+    FillRect(dc, &client, background);
+    DeleteObject(background);
+
+    HPEN border = CreatePen(PS_SOLID, 1, kBufferBorder);
+    HGDIOBJ oldPen = SelectObject(dc, border);
+    HGDIOBJ oldBrush = SelectObject(dc, GetStockObject(NULL_BRUSH));
+    Rectangle(dc, client.left, client.top, client.right, client.bottom);
+    SelectObject(dc, oldBrush);
+    SelectObject(dc, oldPen);
+    DeleteObject(border);
+
+    SetBkMode(dc, TRANSPARENT);
+    SetTextColor(dc, kBufferText);
+
+    HFONT font = CreateUiFont(kBufferFontHeight, false);
+    HFONT oldFont = (HFONT)SelectObject(dc, font);
+    RECT textRect = { client.left + kBufferPaddingX, client.top,
+                      client.right - kBufferCaretWidth - 4, client.bottom };
+    DrawTextW(dc, m_text.c_str(), (int)m_text.size(), &textRect,
+              DT_SINGLELINE | DT_LEFT | DT_VCENTER | DT_NOPREFIX);
+    SelectObject(dc, oldFont);
+    DeleteObject(font);
+
+    // the purple caret bar at the end of the text
+    RECT caret = { m_width - kBufferPaddingX / 2 - kBufferCaretWidth,
+                   client.top + kBufferPaddingY / 2,
+                   m_width - kBufferPaddingX / 2,
+                   client.bottom - kBufferPaddingY / 2 };
+    HBRUSH caretBrush = CreateSolidBrush(kBufferCaret);
+    FillRect(dc, &caret, caretBrush);
+    DeleteObject(caretBrush);
+}
+
+// ------------------------------------------------------------------ candidates
 
 bool CandidateWindow::Create(HINSTANCE instance)
 {
@@ -92,29 +261,48 @@ void CandidateWindow::Destroy()
     m_visible = false;
 }
 
-void CandidateWindow::SetAnchor(int x, int y)
+void CandidateWindow::Layout(int anchorX, int anchorY)
 {
-    m_anchorX = x;
-    m_anchorY = y;
+    HDC dc = GetDC(m_window);
+    HFONT font = CreateUiFont(kCandidateFontHeight, false);
+    int widest = 0;
+    for (size_t i = 0; i < m_candidates.size() && i < 9; ++i)
+        widest = std::max(widest, MeasureText(dc, font, m_candidates[i]));
+    DeleteObject(font);
+    ReleaseDC(m_window, dc);
+
+    m_rowHeight = kCandidateRowHeight;
+    m_width = std::max(90, kCandidatePaddingX * 2 + kCandidateNumberBoxSize + kCandidateGap + widest + 12);
+    const int rows = (int)std::min<size_t>(m_candidates.size(), 9);
+    m_height = rows * m_rowHeight + kCandidatePageHeight + 6;
+
+    RECT workArea = { 0, 0, 0, 0 };
+    SystemParametersInfoW(SPI_GETWORKAREA, 0, &workArea, 0);
+    int x = anchorX;
+    int y = anchorY + 4;
+    if (x + m_width > workArea.right)
+        x = workArea.right - m_width - 8;
+    if (y + m_height > workArea.bottom)
+        y = anchorY - m_height - 4;
+
+    SetWindowPos(m_window, HWND_TOPMOST, x, y, m_width, m_height,
+                 SWP_NOACTIVATE | SWP_SHOWWINDOW);
 }
 
-void CandidateWindow::Show(const std::wstring& composing,
-                           const std::vector<std::wstring>& candidates,
-                           int highlight)
+void CandidateWindow::Show(const std::vector<std::wstring>& candidates, int highlight,
+                           int anchorX, int anchorY)
 {
-    m_composing = composing;
     m_candidates = candidates;
     m_highlight = highlight;
 
-    if (m_composing.empty() && m_candidates.empty()) {
+    if (m_candidates.empty()) {
         Hide();
         return;
     }
-
     if (!m_window)
         return;
 
-    Relayout();
+    Layout(anchorX, anchorY);
     ShowWindow(m_window, SW_SHOWNOACTIVATE);
     m_visible = true;
     InvalidateRect(m_window, nullptr, TRUE);
@@ -125,45 +313,7 @@ void CandidateWindow::Hide()
     if (m_window && m_visible)
         ShowWindow(m_window, SW_HIDE);
     m_visible = false;
-    m_composing.clear();
     m_candidates.clear();
-}
-
-void CandidateWindow::Relayout()
-{
-    HDC dc = GetDC(m_window);
-    HFONT font = CreateUiFont(15, false);
-    HFONT old = (HFONT)SelectObject(dc, font);
-
-    int width = 0;
-    if (!m_composing.empty()) {
-        width = MeasureText(dc, m_composing) + kPadding * 2;
-    }
-    for (size_t i = 0; i < m_candidates.size() && i < 9; ++i) {
-        width += MeasureText(dc, m_candidates[i]) + 18 + kItemSpacing;  // number + glyph
-    }
-
-    SelectObject(dc, old);
-    DeleteObject(font);
-    ReleaseDC(m_window, dc);
-
-    width = (std::max)(width, 60);   // parenthesised: windows.h defines max()
-    const int height = m_candidates.empty() ? kCandidateHeight : kCandidateHeight * 2;
-
-    RECT workArea = { 0, 0, 0, 0 };
-    SystemParametersInfoW(SPI_GETWORKAREA, 0, &workArea, 0);
-
-    int x = m_anchorX;
-    int y = m_anchorY + 4;
-    if (y + height > workArea.bottom)
-        y = m_anchorY - height - 24;
-    if (x + width > workArea.right)
-        x = workArea.right - width - 8;
-    if (x < workArea.left)
-        x = workArea.left + 8;
-
-    SetWindowPos(m_window, HWND_TOPMOST, x, y, width, height,
-                 SWP_NOACTIVATE | SWP_SHOWWINDOW);
 }
 
 LRESULT CALLBACK CandidateWindow::WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
@@ -198,7 +348,7 @@ LRESULT CandidateWindow::HandleMessage(HWND hwnd, UINT message, WPARAM wParam, L
         return 0;
     }
     case WM_NCHITTEST:
-        return HTTRANSPARENT;   // never take clicks; the app keeps the focus
+        return HTTRANSPARENT;
     default:
         break;
     }
@@ -220,47 +370,60 @@ void CandidateWindow::PaintInto(HDC dc, const RECT& client)
     DeleteObject(border);
 
     SetBkMode(dc, TRANSPARENT);
-
-    HFONT font = CreateUiFont(15, false);
+    HFONT font = CreateUiFont(kCandidateFontHeight, false);
+    HFONT numberFont = CreateUiFont(13, false);
+    HFONT pageFont = CreateUiFont(12, false);
     HFONT oldFont = (HFONT)SelectObject(dc, font);
 
-    if (!m_composing.empty()) {
-        RECT row = client;
-        row.left += kPadding;
-        row.top += 4;
-        row.bottom = row.top + kCandidateHeight - 6;
-        SetTextColor(dc, kComposingText);
-        DrawTextW(dc, m_composing.c_str(), (int)m_composing.size(), &row,
-                  DT_SINGLELINE | DT_LEFT | DT_VCENTER | DT_NOPREFIX);
-    }
+    const int rows = (int)std::min<size_t>(m_candidates.size(), 9);
+    for (int i = 0; i < rows; ++i) {
+        RECT row = { client.left + 1, client.top + 3 + i * m_rowHeight,
+                     client.right - 1, client.top + 3 + (i + 1) * m_rowHeight };
+        const bool selected = (i == m_highlight);
 
-    if (!m_candidates.empty()) {
-        int x = client.left + kPadding;
-        const int top = client.top + (m_composing.empty() ? 4 : kCandidateHeight);
-        for (size_t i = 0; i < m_candidates.size() && i < 9; ++i) {
-            const std::wstring& candidate = m_candidates[i];
-            const int width = MeasureText(dc, candidate) + 18;
-
-            RECT box = { x, top + 2, x + width, top + kCandidateHeight - 3 };
-            if ((int)i == m_highlight) {
-                HBRUSH highlight = CreateSolidBrush(kHighlightBackground);
-                FillRect(dc, &box, highlight);
-                DeleteObject(highlight);
-                SetTextColor(dc, kHighlightText);
-            }
-            else {
-                SetTextColor(dc, kCandidateText);
-            }
-
-            std::wstring label = std::to_wstring(i + 1) + L" " + candidate;
-            DrawTextCentered(dc, label, box);
-
-            x += width + kItemSpacing;
+        if (selected) {
+            HBRUSH highlight = CreateSolidBrush(kCandidateHighlight);
+            FillRect(dc, &row, highlight);
+            DeleteObject(highlight);
         }
+
+        // the little number box
+        RECT numberBox = { row.left + kCandidatePaddingX,
+                           row.top + (m_rowHeight - kCandidateNumberBoxSize) / 2,
+                           row.left + kCandidatePaddingX + kCandidateNumberBoxSize,
+                           row.top + (m_rowHeight + kCandidateNumberBoxSize) / 2 };
+        HBRUSH numberBackground = CreateSolidBrush(kCandidateNumberBox);
+        FillRect(dc, &numberBox, numberBackground);
+        DeleteObject(numberBackground);
+
+        SetTextColor(dc, kCandidateNumberText);
+        SelectObject(dc, numberFont);
+        std::wstring number = std::to_wstring(i + 1);
+        DrawTextW(dc, number.c_str(), (int)number.size(), &numberBox,
+                  DT_SINGLELINE | DT_CENTER | DT_VCENTER | DT_NOPREFIX);
+
+        // the candidate itself
+        SelectObject(dc, font);
+        SetTextColor(dc, selected ? kCandidateTextOnHighlight : kCandidateText);
+        RECT textRect = row;
+        textRect.left = numberBox.right + kCandidateGap;
+        DrawTextW(dc, m_candidates[(size_t)i].c_str(), (int)m_candidates[(size_t)i].size(),
+                  &textRect, DT_SINGLELINE | DT_LEFT | DT_VCENTER | DT_NOPREFIX);
     }
+
+    // (page/total) in the footer, right aligned
+    SelectObject(dc, pageFont);
+    SetTextColor(dc, kCandidatePageText);
+    RECT pageRect = { client.left, client.bottom - kCandidatePageHeight - 2,
+                      client.right - 6, client.bottom - 2 };
+    std::wstring page = L"(1/1)";
+    DrawTextW(dc, page.c_str(), (int)page.size(), &pageRect,
+              DT_SINGLELINE | DT_RIGHT | DT_VCENTER | DT_NOPREFIX);
 
     SelectObject(dc, oldFont);
     DeleteObject(font);
+    DeleteObject(numberFont);
+    DeleteObject(pageFont);
 }
 
 // ------------------------------------------------------------------ status bar
@@ -286,17 +449,6 @@ const int kBaseFontHeight = 11;
 int Scale(int value, double factor)
 {
     return (int)(value * factor + 0.5);
-}
-
-int MeasureText(HDC dc, HFONT font, const std::wstring& text)
-{
-    if (text.empty())
-        return 0;
-    HFONT old = (HFONT)SelectObject(dc, font);
-    SIZE size = { 0, 0 };
-    GetTextExtentPoint32W(dc, text.c_str(), (int)text.size(), &size);
-    SelectObject(dc, old);
-    return size.cx;
 }
 
 double DpiFactor(HWND hwnd)

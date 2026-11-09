@@ -95,6 +95,10 @@ void CangjieService::_InitWindows()
         return;
     }
 
+    if (!_inputBufferWindow.Create(g_hInst)) {
+        KeyKeyLog(L"engine: cannot create the composing buffer window");
+        return;
+    }
     if (!_candidateWindow.Create(g_hInst)) {
         KeyKeyLog(L"engine: cannot create the candidate window");
         return;
@@ -116,6 +120,7 @@ void CangjieService::_ToggleMode()
     _engine.ToggleMode();
     _statusBar.SetState(_engine.IsChineseMode(), _simplified, _fullWidth, L"CangJie");
     _candidateWindow.Hide();
+    _inputBufferWindow.Hide();
     KeyKeyLog(L"mode: %s", _engine.IsChineseMode() ? L"Chinese" : L"English");
 }
 
@@ -332,6 +337,7 @@ STDMETHODIMP CangjieService::OnSetFocus(BOOL fForeground)
 {
     if (!fForeground) {
         _candidateWindow.Hide();
+        _inputBufferWindow.Hide();
         _statusBar.Hide();
         _engine.Reset();
     }
@@ -502,17 +508,26 @@ void CangjieService::_UpdateUi(const EngineResult& result)
     if (!_windowsReady)
         return;
 
-    if (result.composing) {
-        // Without a caret rectangle the window would land at the top-left corner
-        // of the screen and look like it never appeared.
-        if (!_caretValid) {
-            _caretX = 240;
-            _caretY = 240;
-        }
-        _candidateWindow.SetAnchor(_caretX, _caretY);
-        _candidateWindow.Show(result.composingText, result.candidates, result.highlight);
+    if (!result.composing) {
+        _candidateWindow.Hide();
+        _inputBufferWindow.Hide();
+        return;
+    }
+
+    // Without a caret rectangle the windows would land in the screen corner and
+    // look like they never appeared.
+    if (!_caretValid) {
+        _caretX = 240;
+        _caretY = 240;
+    }
+
+    _inputBufferWindow.Show(result.composingText, _caretX, _caretY);
+
+    if (!result.candidates.empty()) {
+        const int listTop = _caretY + _inputBufferWindow.Height() + 2;
+        _candidateWindow.Show(result.candidates, result.highlight, _caretX, listTop);
         KeyKeyLog(L"candidates shown: %u item(s) at anchor %d,%d",
-                  (unsigned)result.candidates.size(), _caretX, _caretY);
+                  (unsigned)result.candidates.size(), _caretX, listTop);
     }
     else {
         _candidateWindow.Hide();
