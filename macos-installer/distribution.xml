@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<installer-gui-script minSpecVersion="2">
+    <title>Yahoo! KeyKey 2</title>
+    <organization>com.yahoo</organization>
+    <domains enable_localSystem="true"/>
+    <options customize="never" require-scripts="true" rootVolumeOnly="true" hostArchitectures="arm64,x86_64"/>
+    <license file="License.rtf" mime-type="application/rtf"/>
+    <pkg-ref id="com.yahoo.keykey2.installerpackage"/>
+    <choices-outline>
+        <line choice="default">
+            <line choice="com.yahoo.keykey2.installerpackage"/>
+        </line>
+    </choices-outline>
+    <choice id="default"/>
+    <choice id="com.yahoo.keykey2.installerpackage" visible="false" title="Yahoo! KeyKey 2" description="Yahoo! KeyKey 2">
+        <pkg-ref id="com.yahoo.keykey2.installerpackage"/>
+    </choice>
+    <pkg-ref id="com.yahoo.keykey2.installerpackage" version="1.1.2" onConclusion="RequireRestart">KeyKey2App.pkg</pkg-ref>
+</installer-gui-script>

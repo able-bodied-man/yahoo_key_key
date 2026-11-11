@@ -4,6 +4,10 @@ keykey2/installer/keykey64.msi
 
 # Build output
 keykey2/KeyKey2/build/
+macos-installer/out/
+
+# macOS
+.DS_Store
 
 # Release artifacts (published as GitHub release assets)
 keykey2/release/*.exe
